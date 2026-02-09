@@ -247,6 +247,10 @@ class HDTicket(Document):
                 contact = frappe.db.get_value("Contact", {"email_id": email_id})
                 if contact:
                     self.contact = contact
+        if not self.contact and self.customer:
+            contact = frappe.db.get_value("Customer", self.customer, "customer_primary_contact")
+            if contact:
+                self.contact = contact
 
     def set_customer(self):
         """

@@ -63,7 +63,7 @@ function handleCustomer(updated = false) {
 
 const options = computed(() => {
   return {
-    doctype: "HD Customer",
+    doctype: "Customer",
     selectable: true,
     showSelectBanner: true,
     columnConfig: {

@@ -58,7 +58,7 @@
           <div class="space-y-1">
             <div class="text-xs">{{ __("Customer") }}</div>
             <Link
-              doctype="HD Customer"
+              doctype="Customer"
               class="form-control flex-1"
               :placeholder="__('Link to a customer')"
               v-model="selectedCustomer"
@@ -161,31 +161,31 @@ const phones = computed({
 const selectedCustomer = computed({
   get() {
     const customerLink = contact.doc?.links?.find(
-      (link) => link.link_doctype === "HD Customer"
+      (link) => link.link_doctype === "Customer"
     );
     return customerLink?.link_name || null;
   },
   set(value) {
     const currentCustomer = contact.doc?.links?.find(
-      (link) => link.link_doctype === "HD Customer"
+      (link) => link.link_doctype === "Customer"
     )?.link_name;
 
     if (value !== currentCustomer) {
       if (value) {
         const existingCustomerLinkIndex = contact.doc.links?.findIndex(
-          (link) => link.link_doctype === "HD Customer"
+          (link) => link.link_doctype === "Customer"
         );
         if (existingCustomerLinkIndex !== -1) {
           contact.doc.links[existingCustomerLinkIndex].link_name = value;
         } else {
           contact.doc.links.push({
-            link_doctype: "HD Customer",
+            link_doctype: "Customer",
             link_name: value,
           });
         }
       } else {
         contact.doc.links = contact.doc.links?.filter(
-          (link) => link.link_doctype !== "HD Customer"
+          (link) => link.link_doctype !== "Customer"
         );
       }
       isDirty.value = true;
@@ -194,12 +194,12 @@ const selectedCustomer = computed({
 });
 
 const customerResource = createListResource({
-  doctype: "HD Customer",
-  fields: ["name"],
+  doctype: "Customer",
+  fields: ["name","customer_name"],
   cache: "customers",
   transform: (data) => {
     return data.map((option) => ({
-      label: option.name,
+      label: option.customer_name,
       value: option.name,
     }));
   },

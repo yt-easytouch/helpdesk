@@ -14,7 +14,7 @@
               placeholder="Tesla Inc."
             />
           </div>
-          <div class="space-y-1">
+          <div class="space-y-1 hidden">
             <Input
               v-model="state.domain"
               label="Domain"
@@ -53,9 +53,9 @@ const customerResource = createResource({
   method: "POST",
   data: {
     doc: {
-      doctype: "HD Customer",
+      doctype: "Customer",
       customer_name: state.customer,
-      domain: state.domain,
+      // domain: state.domain,
     },
   },
   onSuccess: () => {
@@ -76,9 +76,9 @@ function addCustomer() {
   }
   customerResource.submit({
     doc: {
-      doctype: "HD Customer",
+      doctype: "Customer",
       customer_name: state.customer,
-      domain: state.domain,
+      // domain: state.domain,
     },
   });
 }
