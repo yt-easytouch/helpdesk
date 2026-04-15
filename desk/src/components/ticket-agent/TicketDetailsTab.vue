@@ -93,6 +93,7 @@ const coreFields = computed(() => {
   const _coreFields = [
     { group: true, fields: [getField("ticket_type"), getField("priority")] },
     { group: false, fields: [getField("customer")] },
+    { group: false, fields: [getField("contact")] },
     { group: true, fields: [getField("agent_group")] },
   ];
 
@@ -124,6 +125,7 @@ const customFields = computed(() => {
     "ticket_type",
     "priority",
     "customer",
+    "contact",
     "agent_group",
     "subject",
     "status",

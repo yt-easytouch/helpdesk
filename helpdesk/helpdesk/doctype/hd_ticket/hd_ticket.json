@@ -26,7 +26,6 @@
   "service_level_section",
   "sla",
   "response_by",
-  "raised_outside_working_hours",
   "cb",
   "agreement_status",
   "resolution_by",
@@ -39,8 +38,6 @@
   "first_responded_on",
   "column_break_26",
   "avg_response_time",
-  "last_agent_response",
-  "last_customer_response",
   "resolution_tab",
   "section_break_19",
   "resolution_details",
@@ -52,8 +49,8 @@
   "user_resolution_time",
   "reference_tab",
   "additional_info",
-  "contact",
   "customer",
+  "contact",
   "email_account",
   "column_break_16",
   "via_customer_portal",
@@ -67,7 +64,8 @@
   "customer_feedback_section",
   "feedback_rating",
   "feedback",
-  "feedback_extra"
+  "feedback_extra",
+  "meta_tab"
  ],
  "fields": [
   {
@@ -233,8 +231,7 @@
   {
    "fieldname": "first_responded_on",
    "fieldtype": "Datetime",
-   "label": "First Responded On",
-   "read_only": 1
+   "label": "First Responded On"
   },
   {
    "fieldname": "column_break_26",
@@ -327,7 +324,7 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Customer",
-   "options": "HD Customer"
+   "options": "Customer"
   },
   {
    "fieldname": "email_account",
@@ -364,21 +361,18 @@
   {
    "fieldname": "feedback_extra",
    "fieldtype": "Long Text",
-   "label": "Feedback (Extra)",
-   "read_only": 1
+   "label": "Feedback (Extra)"
   },
   {
    "fieldname": "feedback",
    "fieldtype": "Link",
    "label": "Feedback (Option)",
-   "options": "HD Ticket Feedback Option",
-   "read_only": 1
+   "options": "HD Ticket Feedback Option"
   },
   {
    "fieldname": "feedback_rating",
    "fieldtype": "Rating",
-   "label": "Rating",
-   "read_only": 1
+   "label": "Rating"
   },
   {
    "fieldname": "sla_tab",
@@ -419,8 +413,7 @@
    "default": "0",
    "fieldname": "is_merged",
    "fieldtype": "Check",
-   "label": "Ticket Merged",
-   "read_only": 1
+   "label": "Ticket Merged"
   },
   {
    "depends_on": "eval:doc.is_merged",
@@ -445,24 +438,9 @@
    "read_only": 1
   },
   {
-   "fieldname": "last_agent_response",
-   "fieldtype": "Datetime",
-   "label": "Last Agent Response",
-   "read_only": 1
-  },
-  {
-   "fieldname": "last_customer_response",
-   "fieldtype": "Datetime",
-   "label": "Last Customer Response",
-   "read_only": 1
-  },
-  {
-   "default": "False",
-   "fieldname": "raised_outside_working_hours",
-   "fieldtype": "Check",
-   "label": "Ticket raised outside working hours",
-   "read_only": 1,
-   "set_only_once": 1
+   "fieldname": "meta_tab",
+   "fieldtype": "Tab Break",
+   "label": "Meta"
   }
  ],
  "grid_page_length": 50,
@@ -529,7 +507,6 @@
  "row_format": "Dynamic",
  "search_fields": "status,subject,raised_by",
  "sender_field": "raised_by",
- "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

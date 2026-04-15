@@ -142,7 +142,7 @@ const formFields: FormField[] = [
     value: "selectedCustomer",
     error: "customerValidationError",
     type: "Link",
-    doctype: "HD Customer",
+    doctype: "Customer",
     required: false,
   },
 ];
@@ -158,13 +158,13 @@ const open = computed({
 });
 
 const customerResource = createListResource({
-  doctype: "HD Customer",
-  fields: ["name"],
+  doctype: "Customer",
+  fields: ["name","customer_name"],
   cache: "customers",
   transform: (data) => {
     return data.map((option) => {
       return {
-        label: option.name,
+        label: option.customer_name,
         value: option.name,
       };
     });
@@ -203,7 +203,7 @@ function createContact() {
   }
   if (state.value.selectedCustomer) {
     doc.links.push({
-      link_doctype: "HD Customer",
+      link_doctype: "Customer",
       link_name: state.value.selectedCustomer,
     });
   }

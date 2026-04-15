@@ -29,7 +29,6 @@ export interface HDTicketStatus extends DocType {
   order?: number;
   /** Enabled: Check */
   enabled: 0 | 1;
-  parsed_color?: string;
 }
 
 // Last updated: 2026-02-27 16:42:43.292656
@@ -128,7 +127,7 @@ export interface AssignmentRuleUser extends ChildDocType {
   weight?: number;
 }
 
-// Last updated: 2024-03-23 16:01:27.759155
+// Last updated: 2019-09-21 16:55:09.376291
 export interface AssignmentRuleDay extends ChildDocType {
   /** Day: Select */
   day?: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
