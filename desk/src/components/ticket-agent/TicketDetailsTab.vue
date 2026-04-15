@@ -1,8 +1,6 @@
 <template>
-  <div
-    class="h-full overflow-y-hidden flex flex-1 flex-col justify-between overflow-hidden max-h-full"
-  >
-    <div class="px-5 pb-4 flex flex-col">
+  <div class="flex h-full flex-col">
+    <div class="shrink-0 px-5 pb-4 flex flex-col">
       <!-- User avatar with buttons -->
       <TicketContact />
       <!-- Core Fields -->
@@ -11,7 +9,7 @@
           v-for="(section, index) in coreFields"
           :key="index"
           :class="
-            section.group ? 'flex gap-2 items-center w-full mb-3' : 'mb-3'
+            section.group ? 'flex gap-2 items-start max-w-full mb-3' : 'mb-3'
           "
         >
           <template v-for="field in section.fields">
@@ -21,7 +19,7 @@
               :ref="(el) => setFieldRef(field.fieldname, el)"
               class="form-control-core"
               :id="field.fieldname"
-              :class="section.group ? 'flex-1' : 'w-full'"
+              :class="section.group ? 'flex-1 min-w-0' : 'w-full'"
               :page-length="10"
               :label="field.label"
               :placeholder="field.placeholder"
@@ -41,21 +39,21 @@
     </div>
 
     <!-- Additional Fields -->
-    <div class="border-t flex flex-col flex-1 h-full pb-3 overflow-y-hidden">
-      <!-- TODO: Hack of 80 % for now, will refactor -->
-      <div class="overflow-y-scroll max-h-[80%]">
-        <template v-for="field in customFields">
-          <TicketField
-            v-if="field.visible"
-            :key="field.fieldname"
-            :field="field"
-            :value="field.value"
-            @change="
-              ({ fieldname, value }) => handleFieldUpdate(fieldname, value)
-            "
-          />
-        </template>
-      </div>
+    <div
+      class="border-t flex-1 min-h-0 overflow-y-auto pb-3 space-y-1.5"
+      v-if="Boolean(customFields.length)"
+    >
+      <template v-for="field in customFields">
+        <TicketField
+          v-if="field.visible"
+          :key="field.fieldname"
+          :field="field"
+          :value="field.value"
+          @change="
+            ({ fieldname, value }) => handleFieldUpdate(fieldname, value)
+          "
+        />
+      </template>
     </div>
   </div>
 </template>
@@ -131,15 +129,18 @@ const customFields = computed(() => {
     "status",
   ];
   customFields = customFields.filter((f) => !_coreFields.includes(f.fieldname));
-  let _customFields = customFields.map((f) => {
-    let fieldMeta = getField(f.fieldname);
+  let _customFields = customFields
+    .map((f) => {
+      let fieldMeta = getField(f.fieldname);
+      if (!fieldMeta) return null;
 
-    fieldMeta = parseField(fieldMeta, ticket.value.doc);
-    // cant handle required depends on as we directly set the value in DB
-    fieldMeta["required"] = fieldMeta.reqd || f.required;
+      fieldMeta = parseField(fieldMeta, ticket.value.doc);
+      // cant handle required depends on as we directly set the value in DB
+      fieldMeta["required"] = fieldMeta.reqd || f.required;
 
-    return getFieldInFormat(f, fieldMeta);
-  });
+      return getFieldInFormat(f, fieldMeta);
+    })
+    .filter(Boolean);
   return _customFields;
 });
 

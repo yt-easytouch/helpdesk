@@ -13,23 +13,10 @@ interface DocType {
     idx?: number;
   }
   
-// Last updated: 2025-08-25 12:29:02.646874
+// Last updated: 2026-02-02 17:22:11.094897
 export interface HDTicketStatus extends DocType {
   /** Color: Select */
-  color?:
-    | "Black"
-    | "Gray"
-    | "Blue"
-    | "Green"
-    | "Red"
-    | "Pink"
-    | "Orange"
-    | "Amber"
-    | "Yellow"
-    | "Cyan"
-    | "Teal"
-    | "Violet"
-    | "purple";
+  color?: 'Black' | 'Gray' | 'Blue' | 'Green' | 'Red' | 'Pink' | 'Orange' | 'Amber' | 'Yellow' | 'Cyan' | 'Teal' | 'Violet' | 'purple';
   /** Label: Data */
   label_agent: string;
   /** Show end users a different view: Check */
@@ -37,7 +24,7 @@ export interface HDTicketStatus extends DocType {
   /** Label (customer view): Data */
   label_customer?: string;
   /** Category: Select */
-  category: "Open" | "Paused" | "Resolved";
+  category: 'Open' | 'Paused' | 'Resolved';
   /** Order: Int */
   order?: number;
   /** Enabled: Check */
@@ -45,7 +32,7 @@ export interface HDTicketStatus extends DocType {
   parsed_color?: string;
 }
 
-// Last updated: 2026-01-20 15:18:57.195606
+// Last updated: 2026-02-27 16:42:43.292656
 export interface HDTicket extends DocType {
   /** Subject: Data */
   subject: string;
@@ -125,14 +112,20 @@ export interface HDTicket extends DocType {
   key?: string;
   /** Status Category: Data */
   status_category?: string;
+  /** Last Agent Response: Datetime */
+  last_agent_response?: string;
+  /** Last Customer Response: Datetime */
+  last_customer_response?: string;
   /** Ticket raised outside working hours: Check */
   raised_outside_working_hours: 0 | 1;
 }
 
-// Last updated: 2024-03-23 16:01:27.847608
+// Last updated: 2026-03-03 12:30:01.394107
 export interface AssignmentRuleUser extends ChildDocType {
   /** User: Link (User) */
   user: string;
+  /** Weight: Int */
+  weight?: number;
 }
 
 // Last updated: 2024-03-23 16:01:27.759155
@@ -141,7 +134,7 @@ export interface AssignmentRuleDay extends ChildDocType {
   day?: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 }
 
-// Last updated: 2025-08-25 17:09:11.644603
+// Last updated: 2026-03-03 13:08:12.561504
 export interface AssignmentRule extends DocType {
   /** Document Type: Link (DocType) */
   document_type: string;
@@ -156,7 +149,7 @@ export interface AssignmentRule extends DocType {
   /** Unassign Condition: Code */
   unassign_condition?: string;
   /** Rule: Select */
-  rule: 'Round Robin' | 'Load Balancing' | 'Based on Field';
+  rule: 'Round Robin' | 'Load Balancing' | 'Based on Field' | 'Weighted Distribution';
   /** Users: Table MultiSelect (Assignment Rule User) */
   users: AssignmentRuleUser[];
   /** Last User: Link (User) */
@@ -169,6 +162,10 @@ export interface AssignmentRule extends DocType {
   due_date_based_on?: any;
   /** Field: Select */
   field?: any;
+  /** Current Index: Int */
+  current_index?: number;
+  /** Users: Table (Assignment Rule User) */
+  weighted_users: AssignmentRuleUser[];
 }
 
 // Last updated: 2021-12-23 19:03:23.507845
@@ -259,7 +256,7 @@ export interface HDServiceLevelAgreement extends DocType {
   default_ticket_status?: string;
 }
 
-// Last updated: 2026-01-19 23:22:29.075052
+// Last updated: 2026-02-02 11:15:47.402850
 export interface HDAgent extends DocType {
   /** User: Link (User) */
   user: string;
