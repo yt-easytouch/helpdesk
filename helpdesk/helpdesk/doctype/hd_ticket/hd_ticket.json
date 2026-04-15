@@ -84,7 +84,6 @@
   },
   {
    "bold": 1,
-   "depends_on": "eval:doc.__islocal",
    "fieldname": "raised_by",
    "fieldtype": "Data",
    "in_global_search": 1,
@@ -120,6 +119,7 @@
    "fieldname": "ticket_type",
    "fieldtype": "Link",
    "label": "Ticket Type",
+   "link_filters": "[[\"HD Ticket Type\",\"disabled\",\"=\",0]]",
    "options": "HD Ticket Type"
   },
   {
@@ -447,7 +447,7 @@
  "icon": "fa fa-issue",
  "idx": 61,
  "links": [],
- "modified": "2026-02-09 12:56:27.161849",
+ "modified": "2026-02-27 16:42:43.292656",
  "modified_by": "Administrator",
  "module": "Helpdesk",
  "name": "HD Ticket",

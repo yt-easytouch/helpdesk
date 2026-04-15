@@ -27,7 +27,6 @@ class HDArticle(Document):
         self.author = frappe.session.user
 
     def before_save(self):
-        self.capture_telemetry()
         # set published date of the hd_article
         if self.status == "Published" and not self.published_on:
             self.published_on = frappe.utils.now()
@@ -48,9 +47,11 @@ class HDArticle(Document):
                 )
             )
 
-    def capture_telemetry(self):
-        if self.is_new():
-            capture_event("article_created")
+    def after_insert(self):
+        count = frappe.db.count("HD Article")
+        if count == 1:
+            return
+        capture_event("article_created")
 
     def on_trash(self):
         self.check_category_length()
@@ -94,19 +95,25 @@ class HDArticle(Document):
         return {"columns": columns}
 
     @frappe.whitelist()
-    def set_feedback(self, value):
+    def set_feedback(self, value: int):
         # 0 empty, 1 like, 2 dislike
         user = frappe.session.user
+
         feedback = frappe.db.exists(
             "HD Article Feedback", {"user": user, "article": self.name}
         )
         if feedback:
+            current_value = frappe.db.get_value(
+                "HD Article Feedback", feedback, "feedback"
+            )
+            if int(current_value) == value:
+                return
             frappe.db.set_value("HD Article Feedback", feedback, "feedback", value)
-            return
-
-        frappe.new_doc(
-            "HD Article Feedback", user=user, article=self.name, feedback=value
-        ).insert()
+            frappe.db.set_value("HD Article Feedback", feedback, "feedback", value)
+        else:
+            frappe.new_doc(
+                "HD Article Feedback", user=user, article=self.name, feedback=value
+            ).insert()
 
     @property
     def title_slug(self) -> str:

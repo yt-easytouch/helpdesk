@@ -2,7 +2,7 @@
   <div v-if="ticket.data" class="flex flex-col">
     <LayoutHeader>
       <template #left-header>
-        <Breadcrumbs :items="breadcrumbs" />
+        <Breadcrumbs :items="breadcrumbs" class="-ml-0.5" />
       </template>
       <template #right-header>
         <CustomActions
@@ -86,13 +86,12 @@ import TicketCustomerSidebar from "@/components/ticket/TicketCustomerSidebar.vue
 import { setupCustomizations } from "@/composables/formCustomisation";
 import { useActiveViewers } from "@/composables/realtime";
 import { useScreenSize } from "@/composables/screen";
-import { socket } from "@/socket";
+
 import { useConfigStore } from "@/stores/config";
 import { globalStore } from "@/stores/globalStore";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation";
 import { isContentEmpty, isCustomerPortal, uploadFunction } from "@/utils";
-import LucideWarning from "~icons/lucide/triangle-alert";
 import {
   Alert,
   Breadcrumbs,
@@ -122,7 +121,6 @@ interface P {
   ticketId: string;
 }
 const router = useRouter();
-
 const props = defineProps<P>();
 
 const { getStatus } = useTicketStatusStore();
@@ -148,7 +146,7 @@ const ticket = createResource({
     });
   },
   onError: () => {
-    toast.error(__("Ticket not found"));
+    toast.error(__("Ticket not found."));
     router.replace("/my-tickets");
   },
 });
@@ -161,7 +159,7 @@ const showFeedbackDialog = ref(false);
 const isExpanded = ref(false);
 
 const { isMobileView } = useScreenSize();
-const { $dialog } = globalStore();
+const { $dialog, $socket } = globalStore();
 const isDismissed = ref(false);
 
 function getTodayKey() {
@@ -276,7 +274,7 @@ function updateTicket(fieldname: string, value: string) {
     auto: true,
     onSuccess: () => {
       ticket.reload();
-      toast.success(__("Ticket updated"));
+      toast.success(__("Ticket updated successfully."));
     },
   });
 }
@@ -303,7 +301,7 @@ function showConfirmationDialog() {
             { fieldname: "status", value: "Closed" },
             {
               onSuccess: () => {
-                toast.success(__("Ticket closed"));
+                toast.success(__("Ticket closed successfully."));
               },
             }
           );
@@ -351,12 +349,13 @@ const showFeedback = computed(() => {
   return hasAgentCommunication && isFeedbackMandatory;
 });
 const { startViewing, stopViewing } = useActiveViewers(props.ticketId);
+
 onMounted(() => {
   startViewing(props.ticketId);
   document.title = props.ticketId;
 
-  socket.on("helpdesk:ticket-update", ({ ticket_id }) => {
-    if (ticket_id === props.ticketId) {
+  $socket.on("helpdesk:ticket-update", ({ ticket_id }) => {
+    if (ticket_id == props.ticketId) {
       ticket.reload();
     }
   });
@@ -365,6 +364,6 @@ onMounted(() => {
 onUnmounted(() => {
   stopViewing(props.ticketId);
   document.title = "Helpdesk";
-  socket.off("helpdesk:ticket-update");
+  $socket.off("helpdesk:ticket-update");
 });
 </script>

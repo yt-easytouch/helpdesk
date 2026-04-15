@@ -397,6 +397,7 @@ export interface View {
   group_by_field?: string;
   name?: string;
   is_customer_portal?: boolean;
+  is_standard?: boolean;
 }
 
 export interface ViewType {
@@ -659,6 +660,12 @@ export type DropdownOption = {
   value: string | number;
 };
 
+export interface AgentOption {
+  value: string;
+  label: string;
+  image?: string;
+}
+
 // symbols
 export const TicketSymbol: InjectionKey<
   ComputedRef<DocumentResource<HDTicket>>
@@ -711,5 +718,7 @@ declare global {
     date_format: string;
     time_format: string;
     session_user: string;
+    timezone: Record<"user" | "system", string>;
+    agent: string | null;
   }
 }
