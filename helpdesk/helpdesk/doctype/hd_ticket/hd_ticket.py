@@ -1032,7 +1032,8 @@ class HDTicket(Document):
                 "label": "Customer",
                 "type": "Link",
                 "key": "customer",
-                "options": "HD Customer",
+                "options": frappe.db.get_single_value("HD Settings", "customer_doctype")
+                or "HD Customer",
                 "width": "8rem",
             },
             {

@@ -319,6 +319,7 @@
   {
    "fieldname": "contact",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Contact",
    "options": "Contact"
   },

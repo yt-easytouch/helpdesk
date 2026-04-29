@@ -95,6 +95,9 @@ def get_customer(contact: str) -> tuple[str]:
     :param contact: Contact which belongs to a customer
     :return: Customer `name` if available
     """
+    customer_doctype = (
+        frappe.db.get_single_value("HD Settings", "customer_doctype") or "HD Customer"
+    )
     QBDynamicLink = frappe.qb.DocType("Dynamic Link")
     QBContact = frappe.qb.DocType("Contact")
     conditions = [QBDynamicLink.parent == contact, QBContact.email_id == contact]
@@ -105,7 +108,7 @@ def get_customer(contact: str) -> tuple[str]:
             .select(QBDynamicLink.link_name)
             .where(QBDynamicLink.parentfield == "links")
             .where(QBDynamicLink.parenttype == "Contact")
-            .where(QBDynamicLink.link_doctype == "HD Customer")
+            .where(QBDynamicLink.link_doctype == customer_doctype)
             .join(QBContact)
             .on(QBDynamicLink.parent == QBContact.name)
             .where(Criterion.any(conditions))

@@ -28,7 +28,12 @@
           />
         </div>
         <form class="w-full" @submit.prevent="update">
-          <Input v-model="domain" label="Domain" placeholder="example.com" />
+          <Input
+            v-if="'domain' in (customer.doc || {})"
+            v-model="domain"
+            label="Domain"
+            placeholder="example.com"
+          />
         </form>
       </div>
     </template>
@@ -36,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+import { useConfigStore } from "@/stores/config";
 import {
   Avatar,
   createDocumentResource,
@@ -52,6 +58,7 @@ const props = defineProps({
   },
 });
 
+const config = useConfigStore();
 const emit = defineEmits(["customer-updated"]);
 
 const domain = computed({
@@ -64,7 +71,7 @@ const domain = computed({
 });
 
 const customer = createDocumentResource({
-  doctype: "HD Customer",
+  doctype: config.customerDoctype,
   name: props.name,
   auto: true,
   setValue: {

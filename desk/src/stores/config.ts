@@ -35,6 +35,9 @@ export const useConfigStore = defineStore("config", () => {
   const enableCommentReactions = computed(
     () => !!parseInt(config.value.enable_comment_reactions)
   );
+  const customerDoctype = computed(
+    () => config.value.customer_doctype || "HD Customer"
+  );
 
   socket.on("helpdesk:settings-updated", () => configResource.reload());
 
@@ -51,5 +54,6 @@ export const useConfigStore = defineStore("config", () => {
     assignWithinTeam,
     disableGlobalScopeForSavedReplies,
     enableCommentReactions,
+    customerDoctype,
   };
 });

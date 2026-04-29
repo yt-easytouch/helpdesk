@@ -27,6 +27,7 @@
               :placeholder="field.placeholder"
               :doctype="field.doctype"
               :modelValue="field.value"
+              :filters="field.filters"
               :required="field.required"
               @update:model-value="
               (val:string) => handleFieldUpdate(field.fieldname, val,true)
@@ -71,8 +72,10 @@ import {
   AssigneeSymbol,
   CustomizationSymbol,
   FieldValue,
+  TicketContactSymbol,
   TicketSymbol,
 } from "@/types";
+import { useConfigStore } from "@/stores/config";
 import { computed, inject, ref } from "vue";
 import TicketField from "../TicketField.vue";
 import AssignTo from "./AssignTo.vue";
@@ -82,6 +85,8 @@ const ticket = inject(TicketSymbol);
 const assignees = inject(AssigneeSymbol);
 const customizations = inject(CustomizationSymbol);
 const activities = inject(ActivitiesSymbol);
+const contact = inject(TicketContactSymbol);
+const config = useConfigStore();
 const { getFields, getField } = getMeta("HD Ticket");
 const { notifyTicketUpdate } = useNotifyTicketUpdate(ticket.value?.name);
 
@@ -95,6 +100,7 @@ const coreFields = computed(() => {
   const _coreFields = [
     { group: true, fields: [getField("ticket_type"), getField("priority")] },
     { group: false, fields: [getField("customer")] },
+    { group: false, fields: [getField("contact")] },
     { group: true, fields: [getField("agent_group")] },
   ];
 
@@ -126,6 +132,7 @@ const customFields = computed(() => {
     "ticket_type",
     "priority",
     "customer",
+    "contact",
     "agent_group",
     "subject",
     "status",
@@ -144,7 +151,7 @@ const customFields = computed(() => {
 });
 
 function getFieldInFormat(fieldTemplate, fieldMeta) {
-  return {
+  const format = {
     label: fieldMeta?.label || fieldTemplate.fieldname,
     value: ticket.value.doc[fieldTemplate.fieldname],
     fieldtype: fieldMeta?.fieldtype,
@@ -160,6 +167,14 @@ function getFieldInFormat(fieldTemplate, fieldMeta) {
     required: fieldTemplate.required || fieldMeta?.required || false,
     visible: fieldMeta.display_via_depends_on && !fieldMeta.hidden,
   };
+  if (fieldTemplate.fieldname === "contact" && ticket.value.doc.customer) {
+    format.filters = [
+      ["Dynamic Link", "link_doctype", "=", config.customerDoctype],
+      ["Dynamic Link", "link_name", "=", ticket.value.doc.customer],
+      ["Dynamic Link", "parenttype", "=", "Contact"],
+    ];
+  }
+  return format;
 }
 
 function handleFieldUpdate(
@@ -179,6 +194,9 @@ function handleFieldUpdate(
         // TODO: emit the event for notification to listeners
         if (fieldname === "agent_group") {
           assignees.value.reload();
+        }
+        if (fieldname === "customer" || fieldname === "contact") {
+          contact.value.reload();
         }
         activities.value.reload();
       },

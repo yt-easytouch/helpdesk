@@ -40,10 +40,12 @@
 import LayoutHeader from "@/components/LayoutHeader.vue";
 import ListViewBuilder from "@/components/ListViewBuilder.vue";
 import NewCustomerDialog from "@/components/desk/global/NewCustomerDialog.vue";
+import { useConfigStore } from "@/stores/config";
 import { Avatar, usePageMeta } from "frappe-ui";
 import { computed, h, ref } from "vue";
 import CustomerDialog from "./CustomerDialog.vue";
 
+const config = useConfigStore();
 const isDialogVisible = ref(false);
 const isCustomerDialogVisible = ref(false);
 const selectedCustomer = ref(null);
@@ -63,7 +65,7 @@ function handleCustomer(updated = false) {
 
 const options = computed(() => {
   return {
-    doctype: "HD Customer",
+    doctype: config.customerDoctype,
     selectable: true,
     showSelectBanner: true,
     columnConfig: {

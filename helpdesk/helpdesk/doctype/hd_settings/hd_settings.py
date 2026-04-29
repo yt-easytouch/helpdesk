@@ -85,10 +85,25 @@ class HDSettings(Document):
         self.update_ticket_permissions()
 
     def on_update(self):
+        self.set_customer_doctype_property_setter()
         event = "helpdesk:settings-updated"
         room = get_website_room()
 
         frappe.publish_realtime(event, room=room, after_commit=True)
+
+    def set_customer_doctype_property_setter(self):
+        if not self.customer_doctype:
+            return
+
+        frappe.make_property_setter(
+            {
+                "doctype": "HD Ticket",
+                "fieldname": "customer",
+                "property": "options",
+                "value": self.customer_doctype,
+                "property_type": "Link",
+            }
+        )
 
     def update_ticket_permissions(self):
         if self.allow_anyone_to_create_tickets:

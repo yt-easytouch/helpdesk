@@ -4,11 +4,17 @@ import frappe
 def before_insert(doc, method=None):
     if doc.email_id:
         domain = doc.email_id.split("@")[1]
-        hd_customers = frappe.get_all(
-            "HD Customer", filters={"domain": domain}, fields=["name"]
+        
+        customer_doctype = (
+            frappe.db.get_single_value("HD Settings", "customer_doctype") or "HD Customer"
         )
-        if hd_customers:
-            doc.append(
-                "links",
-                {"link_doctype": "HD Customer", "link_name": hd_customers[0].name},
+        
+        if frappe.get_meta(customer_doctype).has_field("domain"):
+            customers = frappe.get_all(
+                customer_doctype, filters={"domain": domain}, fields=["name"]
             )
+            if customers:
+                doc.append(
+                    "links",
+                    {"link_doctype": customer_doctype, "link_name": customers[0].name},
+                )

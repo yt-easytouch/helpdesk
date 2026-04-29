@@ -32,7 +32,7 @@ export interface HDTicketStatus extends DocType {
   parsed_color?: string;
 }
 
-// Last updated: 2026-01-16 14:23:14.181727
+// Last updated: 2026-02-27 16:42:43.292656
 export interface HDTicket extends DocType {
   /** Subject: Data */
   subject: string;
@@ -120,19 +120,19 @@ export interface HDTicket extends DocType {
   raised_outside_working_hours: 0 | 1;
 }
 
-// Last updated: 2024-03-23 16:01:27.847608
+// Last updated: 2020-09-29 20:12:14.456785
 export interface AssignmentRuleUser extends ChildDocType {
   /** User: Link (User) */
   user: string;
 }
 
-// Last updated: 2024-03-23 16:01:27.759155
+// Last updated: 2019-09-21 16:55:09.376291
 export interface AssignmentRuleDay extends ChildDocType {
   /** Day: Select */
   day?: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 }
 
-// Last updated: 2025-08-25 17:09:11.644603
+// Last updated: 2021-07-16 22:51:35.505575
 export interface AssignmentRule extends DocType {
   /** Document Type: Link (DocType) */
   document_type: string;

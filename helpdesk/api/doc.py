@@ -404,7 +404,8 @@ def get_quick_filters(doctype: str, show_customer_portal_fields: bool = False):
     elif doctype == "TP Call Log":
         quick_filters.append(name_filter)
         return quick_filters
-    name_filter_doctypes = ["HD Agent", "HD Customer", "HD Ticket"]
+    customer_doctype = frappe.db.get_single_value("HD Settings", "customer_doctype") or "HD Customer"
+    name_filter_doctypes = ["HD Agent", "HD Customer", customer_doctype, "HD Ticket"]
     if doctype in name_filter_doctypes:
         quick_filters.append(name_filter)
 
@@ -418,14 +419,20 @@ def get_quick_filters(doctype: str, show_customer_portal_fields: bool = False):
         if field.fieldtype == "Link":
             options = field.options
 
-        quick_filters.append(
-            {
-                "label": _(field.label),
-                "name": field.fieldname,
-                "type": field.fieldtype,
-                "options": options,
-            }
-        )
+        filter_entry = {
+            "label": _(field.label),
+            "name": field.fieldname,
+            "type": field.fieldtype,
+            "options": options,
+        }
+
+        if doctype == "HD Ticket" and field.fieldname == "contact":
+            filter_entry["filters"] = [
+                ["Dynamic Link", "link_doctype", "=", customer_doctype],
+                ["Dynamic Link", "parenttype", "=", "Contact"],
+            ]
+
+        quick_filters.append(filter_entry)
 
     if doctype != "HD Ticket":
         return quick_filters
