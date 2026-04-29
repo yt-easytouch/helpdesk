@@ -11,7 +11,7 @@
               placeholder="Tesla Inc."
             />
           </div>
-          <div class="space-y-1">
+          <div v-if="config.customerDoctype === 'HD Customer'" class="space-y-1">
             <TextInput
               v-model="state.domain"
               label="Domain"
@@ -35,11 +35,13 @@
 
 <script setup lang="ts">
 import { __ } from "@/translation";
+import { useConfigStore } from "@/stores/config";
 import { Dialog, TextInput, createResource, toast } from "frappe-ui";
 import { reactive } from "vue";
 
 const emit = defineEmits(["customerCreated"]);
 const model = defineModel<boolean>();
+const config = useConfigStore();
 
 const state = reactive({
   customer: "",
@@ -49,13 +51,6 @@ const state = reactive({
 const customerResource = createResource({
   url: "frappe.client.insert",
   method: "POST",
-  data: {
-    doc: {
-      doctype: "HD Customer",
-      customer_name: state.customer,
-      domain: state.domain,
-    },
-  },
   onSuccess: () => {
     state.customer = "";
     state.domain = "";
@@ -63,7 +58,7 @@ const customerResource = createResource({
     emit("customerCreated");
   },
   onError: (err) => {
-    toast.error(err.messages[0]);
+    toast.error(err.messages?.[0] || "Error creating customer");
   },
 });
 
@@ -72,12 +67,13 @@ function addCustomer() {
     toast.error("Customer name is required");
     return;
   }
-  customerResource.submit({
-    doc: {
-      doctype: "HD Customer",
-      customer_name: state.customer,
-      domain: state.domain,
-    },
-  });
+  const doc = {
+    doctype: config.customerDoctype,
+    customer_name: state.customer,
+  };
+  if (config.customerDoctype === "HD Customer") {
+    doc.domain = state.domain;
+  }
+  customerResource.submit({ doc });
 }
 </script>

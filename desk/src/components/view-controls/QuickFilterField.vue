@@ -20,6 +20,7 @@
     v-else-if="filter.type === 'Link'"
     :value="props.value"
     :doctype="filter.options"
+    :filters="filter.filters || null"
     :placeholder="filter.label"
     @change="(data) => updateFilter(filter, data)"
     class="w-36"

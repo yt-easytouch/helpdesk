@@ -25,6 +25,7 @@
               :placeholder="field.placeholder"
               :doctype="field.doctype"
               :modelValue="field.value"
+              :filters="field.filters"
               :required="field.required"
               @update:model-value="
               (val:string) => handleFieldUpdate(field.fieldname, val,true)
@@ -152,8 +153,10 @@ import {
   CustomizationSymbol,
   FieldValue,
   RecentSimilarTicketsSymbol,
+  TicketContactSymbol,
   TicketSymbol,
 } from "@/types";
+import { useConfigStore } from "@/stores/config";
 import { useStorage } from "@vueuse/core";
 import { dayjs, Tooltip } from "frappe-ui";
 import { computed, inject, ref } from "vue";
@@ -168,6 +171,8 @@ const assignees = inject(AssigneeSymbol)!;
 const customizations = inject(CustomizationSymbol)!;
 const activities = inject(ActivitiesSymbol)!;
 const recentSimilarTickets = inject(RecentSimilarTicketsSymbol)!;
+const contact = inject(TicketContactSymbol);
+const config = useConfigStore();
 const { getFields, getField } = getMeta("HD Ticket");
 const { notifyTicketUpdate } = useNotifyTicketUpdate(ticket.value?.name);
 
@@ -184,6 +189,7 @@ const coreFields = computed(() => {
   const _coreFields = [
     { group: true, fields: [getField("ticket_type"), getField("priority")] },
     { group: false, fields: [getField("customer")] },
+    { group: false, fields: [getField("contact")] },
     { group: true, fields: [getField("agent_group")] },
   ];
 
@@ -215,6 +221,7 @@ const customFields = computed(() => {
     "ticket_type",
     "priority",
     "customer",
+    "contact",
     "agent_group",
     "subject",
     "status",
@@ -289,7 +296,7 @@ function openTicket(name: string) {
 }
 
 function getFieldInFormat(fieldTemplate, fieldMeta) {
-  return {
+  const format = {
     label: fieldMeta?.label || fieldTemplate.fieldname,
     value: ticket.value.doc[fieldTemplate.fieldname],
     fieldtype: fieldMeta?.fieldtype,
@@ -308,6 +315,14 @@ function getFieldInFormat(fieldTemplate, fieldMeta) {
       !fieldMeta.hidden &&
       (!!ticket.value.doc[fieldTemplate.fieldname] || !fieldMeta.read_only),
   };
+  if (fieldTemplate.fieldname === "contact" && ticket.value.doc.customer) {
+    format.filters = [
+      ["Dynamic Link", "link_doctype", "=", config.customerDoctype],
+      ["Dynamic Link", "link_name", "=", ticket.value.doc.customer],
+      ["Dynamic Link", "parenttype", "=", "Contact"],
+    ];
+  }
+  return format;
 }
 
 const normalize = (v: string | FieldValue) =>
@@ -330,6 +345,9 @@ function handleFieldUpdate(
         // TODO: emit the event for notification to listeners
         if (fieldname === "agent_group") {
           assignees.value.reload();
+        }
+        if (fieldname === "customer" || fieldname === "contact") {
+          contact.value.reload();
         }
         activities.value.reload();
       },

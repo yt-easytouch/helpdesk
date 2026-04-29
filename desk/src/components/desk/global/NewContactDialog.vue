@@ -51,6 +51,7 @@
 
 <script setup lang="ts">
 import { useContactStore } from "@/stores/contact";
+import { useConfigStore } from "@/stores/config";
 import { computed, ref } from "vue";
 
 import {
@@ -78,6 +79,7 @@ const emit = defineEmits<{
 }>();
 
 const contactStore = useContactStore();
+const config = useConfigStore();
 
 const state = ref({
   emailID: "",
@@ -105,7 +107,7 @@ interface FormField {
   action?: () => void;
 }
 
-const formFields: FormField[] = [
+const formFields = computed((): FormField[] => [
   {
     label: __("Email Id"),
     value: "emailID",
@@ -142,10 +144,10 @@ const formFields: FormField[] = [
     value: "selectedCustomer",
     error: "customerValidationError",
     type: "Link",
-    doctype: "HD Customer",
+    doctype: config.customerDoctype,
     required: false,
   },
-];
+]);
 
 const open = computed({
   get: () => props.modelValue,
@@ -158,7 +160,7 @@ const open = computed({
 });
 
 const customerResource = createListResource({
-  doctype: "HD Customer",
+  doctype: config.customerDoctype,
   fields: ["name"],
   cache: "customers",
   transform: (data) => {
@@ -203,7 +205,7 @@ function createContact() {
   }
   if (state.value.selectedCustomer) {
     doc.links.push({
-      link_doctype: "HD Customer",
+      link_doctype: config.customerDoctype,
       link_name: state.value.selectedCustomer,
     });
   }

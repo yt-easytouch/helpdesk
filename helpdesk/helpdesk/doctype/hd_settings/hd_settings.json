@@ -21,6 +21,7 @@
   "ticket_tab",
   "ticket_type_section",
   "default_ticket_type",
+  "customer_doctype",
   "column_break_zxek",
   "feedback_section",
   "is_feedback_mandatory",
@@ -157,6 +158,13 @@
    "fieldtype": "Link",
    "label": "Default ticket type",
    "options": "HD Ticket Type"
+  },
+  {
+   "fieldname": "customer_doctype",
+   "fieldtype": "Select",
+   "label": "Customer Doctype",
+   "options": "HD Customer\nCustomer",
+   "default": "HD Customer"
   },
   {
    "fieldname": "column_break_zxek",
