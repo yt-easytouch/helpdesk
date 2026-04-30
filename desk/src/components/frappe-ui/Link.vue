@@ -175,7 +175,10 @@ watch(
 
 const options = createResource({
   url: "frappe.desk.search.search_link",
-  cache: [props.doctype, text.value, props.hideMe],
+  ...(props.minQueryLength === 0
+    ? { cache: [props.doctype, text.value, props.hideMe] }
+    : {}),
+  auto: props.minQueryLength === 0,
   method: "POST",
   params: {
     txt: text.value,
@@ -206,10 +209,14 @@ const options = createResource({
 });
 
 function reload(val) {
+  val = val || "";
   if (
     props.minQueryLength > 0 &&
-    (!val || val.length < props.minQueryLength)
+    val.length < props.minQueryLength
   ) {
+    if (options.loading) {
+      options.abort();
+    }
     options.setData([]);
     return;
   }
