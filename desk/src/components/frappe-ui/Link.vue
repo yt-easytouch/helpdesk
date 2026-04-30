@@ -168,7 +168,7 @@ watch(
         page_length: props.pageLength,
       },
     });
-    options.reload();
+    reload(text.value);
   },
   { deep: true }
 );
