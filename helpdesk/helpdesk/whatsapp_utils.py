@@ -73,11 +73,30 @@ def send_whatsapp_notification(ticket, event):
                 recipients.append(number)
         
         elif rule.recipient_type == "Customer":
+            # Check Contact first
             if ticket.contact:
                 mobile = frappe.db.get_value("Contact", ticket.contact, "mobile_no") or \
                          frappe.db.get_value("Contact", ticket.contact, "phone")
                 if mobile:
                     recipients.append(mobile)
+            
+            # Check HD Customer for custom fields
+            if ticket.customer:
+                try:
+                    customer_data = frappe.db.get_value(
+                        "Customer", 
+                        ticket.customer, 
+                        ["custom_whatsapp_number", "custom_whatsapp_group"], 
+                        as_dict=1
+                    )
+                    if customer_data:
+                        if customer_data.get("custom_whatsapp_number"):
+                            recipients.append(customer_data.custom_whatsapp_number)
+                        if customer_data.get("custom_whatsapp_group"):
+                            recipients.append(customer_data.custom_whatsapp_group)
+                except Exception:
+                    # Fields might not exist yet
+                    pass
         
         elif rule.recipient_type == "Assigned Agent":
             for agent_user in ticket_assignees:

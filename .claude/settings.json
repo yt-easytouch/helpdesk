@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /Users/abdisalamnorali/Sites/localhost/etapps/apps/helpdesk/desk/.env*)",
+      "Read(//private/etc/**)",
+      "Bash(lsof -ti:8081)",
+      "Read(//Users/abdisalamnorali/Sites/localhost/etapps/**)",
+      "Bash(python3 -c \"import sys,json; c=json.load\\(sys.stdin\\); print\\('redis_cache:', c.get\\('redis_cache','not set'\\)\\)\")"
+    ]
+  }
+}

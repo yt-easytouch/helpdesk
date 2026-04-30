@@ -167,6 +167,7 @@ function getFieldInFormat(fieldTemplate, fieldMeta) {
     fieldname: fieldTemplate.fieldname,
     required: fieldTemplate.required || fieldMeta?.required || false,
     visible: fieldMeta.display_via_depends_on && !fieldMeta.hidden,
+    minQueryLength: fieldTemplate.fieldtype === "Link" ? 2 : 0,
   };
   if (fieldTemplate.fieldname === "contact" && ticket.value.doc.customer) {
     format.filters = [
@@ -191,23 +192,23 @@ function handleFieldUpdate(
     const label = getField(fieldname)?.label || fieldname;
     notifyTicketUpdate(label, value as string);
   }
-  ticket.value.setValue.submit(
-    { [fieldname]: value },
-    {
-      onSuccess: () => {
-        // TODO: emit the event for notification to listeners
-        if (fieldname === "agent_group") {
-          assignees.value.reload();
-        }
-        if (fieldname === "customer" || fieldname === "contact") {
-          contact.value.reload();
-        }
-        activities.value.reload();
-      },
-    }
 
-    //show error toast
-  );
+  // When customer changes, clear the contact so the filtered list re-evaluates
+  const payload: Record<string, string> =
+    fieldname === "customer" ? { customer: value as string, contact: "" } : { [fieldname]: value as string };
+
+  ticket.value.setValue.submit(payload, {
+    onSuccess: () => {
+      // TODO: emit the event for notification to listeners
+      if (fieldname === "agent_group") {
+        assignees.value.reload();
+      }
+      if (fieldname === "customer" || fieldname === "contact") {
+        contact.value.reload();
+      }
+      activities.value.reload();
+    },
+  });
 }
 
 const fieldRefs = ref<Record<string, any>>({});

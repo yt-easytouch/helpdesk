@@ -22,7 +22,7 @@ import TicketDetailsTab from "./TicketDetailsTab.vue";
 const currentTab = ref("details");
 const tabs = [
   {
-    label: "Details",
+    label: "Details Info",
     value: "details",
   },
   {

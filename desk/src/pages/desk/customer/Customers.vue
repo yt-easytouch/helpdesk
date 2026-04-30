@@ -63,11 +63,23 @@ function handleCustomer(updated = false) {
   listViewRef.value?.reload();
 }
 
+const isErpNextCustomer = computed(
+  () => config.customerDoctype === "Customer"
+);
+
 const options = computed(() => {
   return {
     doctype: config.customerDoctype,
     selectable: true,
     showSelectBanner: true,
+    defaultColumns: isErpNextCustomer.value
+      ? [
+          { label: "Customer Name", key: "customer_name", type: "Data", width: "16rem" },
+          { label: "Customer Type", key: "customer_type", type: "Select", width: "8rem" },
+          { label: "Customer Group", key: "customer_group", type: "Link", width: "10rem" },
+          { label: "Territory", key: "territory", type: "Link", width: "10rem" },
+        ]
+      : [],
     columnConfig: {
       name: {
         prefix: ({ row }) => {

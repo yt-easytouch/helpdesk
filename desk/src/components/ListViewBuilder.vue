@@ -291,7 +291,7 @@ const defaultParams = reactive({
   page_length: pageLengthCount.value,
   page_length_count: pageLengthCount.value,
   view: options.value.view,
-  columns: [],
+  columns: options.value.defaultColumns || [],
   rows: [],
   show_customer_portal_fields: options.value.isCustomerPortal,
   is_default: false,
