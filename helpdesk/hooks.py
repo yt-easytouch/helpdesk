@@ -66,6 +66,13 @@ doc_events = {
         "on_trash": "helpdesk.extends.assignment_rule.on_assignment_rule_trash",
         "validate": "helpdesk.extends.assignment_rule.on_assignment_rule_validate",
     },
+    "HD Ticket": {
+        "after_insert": "helpdesk.helpdesk.whatsapp_utils.after_ticket_insert",
+        "on_update": "helpdesk.helpdesk.whatsapp_utils.on_ticket_update",
+    },
+    "ToDo": {
+        "after_insert": "helpdesk.helpdesk.whatsapp_utils.after_todo_insert",
+    },
 }
 
 has_permission = {

@@ -11,7 +11,8 @@
   "assignment_rule",
   "users",
   "column_break_feto",
-  "ignore_restrictions"
+  "ignore_restrictions",
+  "whatsapp_group_number"
  ],
  "fields": [
   {
@@ -39,6 +40,11 @@
    "fieldname": "ignore_restrictions",
    "fieldtype": "Check",
    "label": "Ignore Restrictions"
+  },
+  {
+   "fieldname": "whatsapp_group_number",
+   "fieldtype": "Data",
+   "label": "WhatsApp Group Number"
   },
   {
    "fieldname": "column_break_feto",
