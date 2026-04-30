@@ -13,6 +13,7 @@
       :placeholder="attrs.placeholder"
       :filterable="false"
       :disabled="attrs.disabled"
+      :min-query-length="minQueryLength"
     >
       <template #target="{ open, togglePopover }">
         <slot name="target" v-bind="{ open, togglePopover }" />
@@ -110,6 +111,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  minQueryLength: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "change"]);
@@ -139,12 +144,16 @@ watchDebounced(
     text.value = val;
     reload(val);
   },
-  { debounce: 300, immediate: true }
+  { debounce: 300 }
 );
 
 watchDebounced(
   () => props.doctype,
-  () => reload(""),
+  () => {
+    if (props.minQueryLength === 0) {
+      reload("");
+    }
+  },
   { debounce: 300, immediate: true }
 );
 
@@ -197,6 +206,14 @@ const options = createResource({
 });
 
 function reload(val) {
+  if (
+    props.minQueryLength > 0 &&
+    (!val || val.length < props.minQueryLength)
+  ) {
+    options.setData([]);
+    return;
+  }
+
   if (
     options.data?.length &&
     val === options.params?.txt &&

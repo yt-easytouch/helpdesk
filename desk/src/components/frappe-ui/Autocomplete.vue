@@ -108,7 +108,10 @@
                 v-if="groups.length == 0"
                 class="mt-1.5 rounded-md px-2.5 py-1.5 text-base text-ink-gray-5"
               >
-                No results found
+                <template v-if="minQueryLength && query.length < minQueryLength">
+                  Type at least {{ minQueryLength }} characters to search
+                </template>
+                <template v-else> No results found </template>
               </li>
             </ComboboxOptions>
             <div
@@ -165,6 +168,10 @@ const props = defineProps({
   filterable: {
     type: Boolean,
     default: true,
+  },
+  minQueryLength: {
+    type: Number,
+    default: 0,
   },
 });
 const emit = defineEmits(["update:modelValue", "update:query", "change"]);

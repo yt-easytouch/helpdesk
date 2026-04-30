@@ -21,6 +21,7 @@
               :id="field.fieldname"
               :class="section.group ? 'flex-1 min-w-0' : 'w-full'"
               :page-length="10"
+              :min-query-length="field.minQueryLength"
               :label="field.label"
               :placeholder="field.placeholder"
               :doctype="field.doctype"
@@ -321,6 +322,9 @@ function getFieldInFormat(fieldTemplate, fieldMeta) {
       ["Dynamic Link", "link_name", "=", ticket.value.doc.customer],
       ["Dynamic Link", "parenttype", "=", "Contact"],
     ];
+  }
+  if (["customer", "contact"].includes(fieldTemplate.fieldname)) {
+    format.minQueryLength = 3;
   }
   return format;
 }

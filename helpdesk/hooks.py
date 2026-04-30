@@ -88,6 +88,13 @@ doc_events = {
         "on_update": "helpdesk.integrations.erpnext.doc_share.on_update",
         "on_trash": "helpdesk.integrations.erpnext.doc_share.on_trash",
     },
+    "HD Ticket": {
+        "after_insert": "helpdesk.helpdesk.whatsapp_utils.after_ticket_insert",
+        "on_update": "helpdesk.helpdesk.whatsapp_utils.on_ticket_update",
+    },
+    "ToDo": {
+        "after_insert": "helpdesk.helpdesk.whatsapp_utils.after_todo_insert",
+    },
     "Notification Log": {
         "before_insert": "helpdesk.extends.notification_log.before_insert",
     },
