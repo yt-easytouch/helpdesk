@@ -79,7 +79,7 @@
 <script setup>
 import { watchDebounced } from "@vueuse/core";
 import { createResource } from "frappe-ui";
-import { computed, ref, useAttrs, watch } from "vue";
+import { computed, onMounted, ref, useAttrs, watch } from "vue";
 import Autocomplete from "./Autocomplete.vue";
 
 const props = defineProps({
@@ -123,13 +123,28 @@ const attrs = useAttrs();
 
 const valuePropPassed = computed(() => "value" in attrs);
 
+const selectedLabel = ref("");
+
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    if (!newVal) selectedLabel.value = "";
+  }
+);
+
 const value = computed({
-  get: () => (valuePropPassed.value ? attrs.value : props.modelValue),
+  get: () => {
+    const raw = valuePropPassed.value ? attrs.value : props.modelValue;
+    if (raw && selectedLabel.value) {
+      return { value: raw, label: selectedLabel.value };
+    }
+    return raw;
+  },
   set: (val) => {
-    return (
-      val?.value &&
-      emit(valuePropPassed.value ? "change" : "update:modelValue", val?.value)
-    );
+    if (val?.value) {
+      selectedLabel.value = val.label || val.value;
+      emit(valuePropPassed.value ? "change" : "update:modelValue", val.value);
+    }
   },
 });
 
@@ -155,6 +170,25 @@ watchDebounced(
     }
   },
   { debounce: 300, immediate: true }
+);
+
+// When minQueryLength > 0, fetch the label for the pre-existing value so it displays correctly
+onMounted(() => {
+  if (props.minQueryLength > 0 && props.modelValue) {
+    reload(props.modelValue);
+  }
+});
+
+// After options load, sync selectedLabel from the matching option
+watch(
+  () => options.data,
+  (data) => {
+    const raw = valuePropPassed.value ? attrs.value : props.modelValue;
+    if (raw && data?.length) {
+      const match = data.find((o) => o.value === raw);
+      if (match) selectedLabel.value = match.label || match.value;
+    }
+  }
 );
 
 watch(
@@ -240,6 +274,7 @@ function reload(val) {
 }
 
 function clearValue(close) {
+  selectedLabel.value = "";
   emit(valuePropPassed.value ? "change" : "update:modelValue", "");
   close();
 }

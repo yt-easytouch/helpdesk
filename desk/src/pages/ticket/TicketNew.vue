@@ -106,7 +106,31 @@
       </div>
 
       <!-- for agent portal -->
-      <div v-if="!isCustomerPortal">
+      <div v-if="!isCustomerPortal" class="flex flex-col gap-5">
+        <!-- Customer & Contact -->
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="flex flex-col gap-1.5">
+            <Link
+              :doctype="config.customerDoctype"
+              :label="__('Customer')"
+              :placeholder="__('Search customer...')"
+              :modelValue="customer"
+              :min-query-length="3"
+              @update:model-value="onCustomerChange"
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Link
+              doctype="Contact"
+              :label="__('Contact')"
+              :placeholder="__('Search contact...')"
+              :modelValue="contact"
+              :min-query-length="customer ? 0 : 3"
+              :filters="contactFilters"
+              @update:model-value="(v) => (contact = v)"
+            />
+          </div>
+        </div>
         <TicketTextEditor
           ref="editor"
           v-model:attachments="attachments"
@@ -132,7 +156,8 @@
 </template>
 
 <script setup lang="ts">
-import { LayoutHeader, UniInput } from "@/components";
+import { LayoutHeader, Link, UniInput } from "@/components";
+import { useConfigStore } from "@/stores/config";
 import {
   handleLinkFieldUpdate,
   handleSelectFieldUpdate,
@@ -176,11 +201,52 @@ const router = useRouter();
 const { $dialog } = globalStore();
 const { updateOnboardingStep } = useOnboarding("helpdesk");
 const { isManager, userId: userID } = useAuthStore();
+const config = useConfigStore();
 
 const subject = ref("");
 const description = ref("");
 const attachments = ref([]);
 const templateFields = reactive({});
+const customer = ref("");
+const contact = ref("");
+
+const contactFilters = computed(() =>
+  customer.value
+    ? [
+        ["Dynamic Link", "link_doctype", "=", config.customerDoctype],
+        ["Dynamic Link", "link_name", "=", customer.value],
+        ["Dynamic Link", "parenttype", "=", "Contact"],
+      ]
+    : null
+);
+
+const defaultContact = createResource({
+  url: "frappe.client.get_list",
+  makeParams: () => ({
+    doctype: "Contact",
+    filters: [
+      ["Dynamic Link", "link_doctype", "=", config.customerDoctype],
+      ["Dynamic Link", "link_name", "=", customer.value],
+      ["Dynamic Link", "parenttype", "=", "Contact"],
+    ],
+    fields: ["name"],
+    order_by: "is_primary_contact desc, name asc",
+    limit: 1,
+  }),
+  onSuccess: (data) => {
+    if (data?.length) {
+      contact.value = data[0].name;
+    }
+  },
+});
+
+function onCustomerChange(val: string) {
+  customer.value = val;
+  contact.value = "";
+  if (val) {
+    defaultContact.reload();
+  }
+}
 
 const template = createResource({
   url: "helpdesk.helpdesk.doctype.hd_ticket_template.api.get_one",
@@ -256,6 +322,8 @@ const ticket = createResource({
       subject: subject.value,
       template: props.templateId,
       ...templateFields,
+      ...(customer.value ? { customer: customer.value } : {}),
+      ...(contact.value ? { contact: contact.value } : {}),
     },
     attachments: attachments.value,
   }),
