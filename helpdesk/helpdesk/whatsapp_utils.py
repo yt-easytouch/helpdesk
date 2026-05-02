@@ -11,7 +11,7 @@ def on_ticket_update(doc, method):
         return
 
     if doc.has_value_changed("agent_group"):
-        send_whatsapp_notification(doc, "Ticket Assigned")
+        send_whatsapp_notification(doc, "Ticket Assigned", skip_recipient_types=["Customer"])
 
     if doc.has_value_changed("status"):
         send_whatsapp_notification(doc, "Status Changed")
@@ -24,7 +24,7 @@ def after_todo_insert(doc, method):
         ticket = frappe.get_doc("HD Ticket", doc.reference_name)
         send_whatsapp_notification(ticket, "Ticket Assigned")
 
-def send_whatsapp_notification(ticket, event):
+def send_whatsapp_notification(ticket, event, skip_recipient_types=None):
     """
     Find matching notification rules and send WhatsApp messages.
     """
@@ -39,6 +39,9 @@ def send_whatsapp_notification(ticket, event):
 
     for rule_data in rules:
         rule = frappe.get_doc("HD Ticket Notification", rule_data.name)
+
+        if skip_recipient_types and rule.recipient_type in skip_recipient_types:
+            continue
         
         # Filter: Team
         if rule.agent_group and ticket.agent_group != rule.agent_group:
@@ -76,32 +79,24 @@ def send_whatsapp_notification(ticket, event):
                 recipients.append(number)
         
         elif rule.recipient_type == "Customer":
-            # Check Contact first
-            if ticket.contact:
-                mobile = frappe.db.get_value("Contact", ticket.contact, "mobile_no") or \
-                         frappe.db.get_value("Contact", ticket.contact, "phone")
-                if mobile:
-                    recipients.append(mobile)
-            
-            # Check customer doctype for custom fields
             if ticket.customer:
-                try:
-                    customer_doctype = (
-                        frappe.db.get_single_value("HD Settings", "customer_doctype") or "HD Customer"
-                    )
-                    customer_data = frappe.db.get_value(
-                        customer_doctype,
-                        ticket.customer,
-                        ["custom_whatsapp_number", "custom_whatsapp_group"],
-                        as_dict=1
-                    )
-                    if customer_data:
-                        if customer_data.get("custom_whatsapp_number"):
-                            recipients.append(customer_data.custom_whatsapp_number)
-                        if customer_data.get("custom_whatsapp_group"):
-                            recipients.append(customer_data.custom_whatsapp_group)
-                except Exception:
-                    pass
+                customer_doctype = (
+                    frappe.db.get_single_value("HD Settings", "customer_doctype") or "HD Customer"
+                )
+                whatsapp_number = frappe.db.get_value(customer_doctype, ticket.customer, "custom_whatsapp_number")
+                whatsapp_group = frappe.db.get_value(customer_doctype, ticket.customer, "custom_whatsapp_group")
+                if whatsapp_number:
+                    recipients.append(whatsapp_number)
+                if whatsapp_group:
+                    recipients.append(whatsapp_group)
+
+            if ticket.contact:
+                contact_number = (
+                    frappe.db.get_value("Contact", ticket.contact, "mobile_no") or
+                    frappe.db.get_value("Contact", ticket.contact, "phone")
+                )
+                if contact_number:
+                    recipients.append(contact_number)
         
         elif rule.recipient_type == "Assigned Agent":
             for agent_user in ticket_assignees:
