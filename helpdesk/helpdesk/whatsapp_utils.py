@@ -169,6 +169,7 @@ def format_whatsapp_message(template, ticket):
             u = frappe.get_doc("User", agent_email)
             assigned_users.append({
                 "name": u.full_name,
+                "first_name": u.first_name,
                 "phone": u.mobile_no or u.phone or "",
                 "email": u.name
             })
