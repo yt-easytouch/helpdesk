@@ -7,7 +7,7 @@ def after_ticket_insert(doc, method):
     send_whatsapp_notification(doc, "New Ticket")
 
 def on_ticket_update(doc, method):
-    if doc.has_value_changed("agent_group") or doc.has_value_changed("_assign"):
+    if doc.has_value_changed("agent_group"):
         send_whatsapp_notification(doc, "Ticket Assigned")
     
     if doc.has_value_changed("status"):
