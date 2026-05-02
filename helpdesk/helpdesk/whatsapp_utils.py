@@ -7,9 +7,12 @@ def after_ticket_insert(doc, method):
     send_whatsapp_notification(doc, "New Ticket")
 
 def on_ticket_update(doc, method):
+    if doc.flags.in_insert:
+        return
+
     if doc.has_value_changed("agent_group"):
         send_whatsapp_notification(doc, "Ticket Assigned")
-    
+
     if doc.has_value_changed("status"):
         send_whatsapp_notification(doc, "Status Changed")
 
@@ -80,13 +83,16 @@ def send_whatsapp_notification(ticket, event):
                 if mobile:
                     recipients.append(mobile)
             
-            # Check HD Customer for custom fields
+            # Check customer doctype for custom fields
             if ticket.customer:
                 try:
+                    customer_doctype = (
+                        frappe.db.get_single_value("HD Settings", "customer_doctype") or "HD Customer"
+                    )
                     customer_data = frappe.db.get_value(
-                        "Customer", 
-                        ticket.customer, 
-                        ["custom_whatsapp_number", "custom_whatsapp_group"], 
+                        customer_doctype,
+                        ticket.customer,
+                        ["custom_whatsapp_number", "custom_whatsapp_group"],
                         as_dict=1
                     )
                     if customer_data:
@@ -95,7 +101,6 @@ def send_whatsapp_notification(ticket, event):
                         if customer_data.get("custom_whatsapp_group"):
                             recipients.append(customer_data.custom_whatsapp_group)
                 except Exception:
-                    # Fields might not exist yet
                     pass
         
         elif rule.recipient_type == "Assigned Agent":
