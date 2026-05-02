@@ -176,8 +176,10 @@ function getFieldInFormat(fieldTemplate, fieldMeta) {
       ["Dynamic Link", "parenttype", "=", "Contact"],
     ];
   }
-  if (["customer", "contact"].includes(fieldTemplate.fieldname)) {
+  if (fieldTemplate.fieldname === "customer") {
     format.minQueryLength = 3;
+  } else if (fieldTemplate.fieldname === "contact") {
+    format.minQueryLength = ticket.value?.doc?.customer ? 0 : 3;
   }
   return format;
 }

@@ -144,5 +144,26 @@ def get_ticket_assignees(ticket_name):
 def format_whatsapp_message(template, ticket):
     """
     Replace placeholders in the template with ticket values using Jinja.
+    Also exposes the customer document as `customer` in the template context.
     """
-    return frappe.render_template(template, {"doc": ticket})
+    context = {"doc": ticket}
+
+    if ticket.customer:
+        customer_doctype = (
+            frappe.db.get_single_value("HD Settings", "customer_doctype") or "HD Customer"
+        )
+        try:
+            context["customer"] = frappe.get_doc(customer_doctype, ticket.customer)
+        except Exception:
+            context["customer"] = None
+
+    if ticket.raised_by:
+        try:
+            user = frappe.get_doc("User", ticket.raised_by)
+            context["user_name"] = user.full_name
+            context["user_phone"] = user.mobile_no or user.phone or ""
+        except Exception:
+            context["user_name"] = ""
+            context["user_phone"] = ""
+
+    return frappe.render_template(template, context)
