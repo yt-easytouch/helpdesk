@@ -162,13 +162,21 @@ def format_whatsapp_message(template, ticket):
         except Exception:
             context["customer"] = None
 
-    if ticket.raised_by:
+    # Assigned agents (single or multiple)
+    assigned_users = []
+    for agent_email in get_ticket_assignees(ticket.name):
         try:
-            user = frappe.get_doc("User", ticket.raised_by)
-            context["user_name"] = user.full_name
-            context["user_phone"] = user.mobile_no or user.phone or ""
+            u = frappe.get_doc("User", agent_email)
+            assigned_users.append({
+                "name": u.full_name,
+                "phone": u.mobile_no or u.phone or "",
+                "email": u.name
+            })
         except Exception:
-            context["user_name"] = ""
-            context["user_phone"] = ""
+            pass
+
+    context["assigned_users"] = assigned_users
+    # First assigned agent shortcut
+    context["assigned_user"] = assigned_users[0] if assigned_users else {"name": "", "phone": "", "email": ""}
 
     return frappe.render_template(template, context)
