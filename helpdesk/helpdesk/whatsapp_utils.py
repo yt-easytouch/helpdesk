@@ -158,9 +158,23 @@ def format_whatsapp_message(template, ticket):
             frappe.db.get_single_value("HD Settings", "customer_doctype") or "HD Customer"
         )
         try:
-            context["customer"] = frappe.get_doc(customer_doctype, ticket.customer)
+            customer_doc = frappe.get_doc(customer_doctype, ticket.customer)
+            context["customer"] = customer_doc
+            context["customer_whatsapp"] = customer_doc.get("custom_whatsapp_number") or ""
+            context["customer_group"] = customer_doc.get("custom_whatsapp_group") or ""
         except Exception:
             context["customer"] = None
+            context["customer_whatsapp"] = ""
+            context["customer_group"] = ""
+
+    if ticket.contact:
+        try:
+            contact = frappe.get_doc("Contact", ticket.contact)
+            context["contact"] = contact
+            context["contact_phone"] = contact.mobile_no or contact.phone or ""
+        except Exception:
+            context["contact"] = None
+            context["contact_phone"] = ""
 
     # Assigned agents (single or multiple)
     assigned_users = []
@@ -179,5 +193,11 @@ def format_whatsapp_message(template, ticket):
     context["assigned_users"] = assigned_users
     # First assigned agent shortcut
     context["assigned_user"] = assigned_users[0] if assigned_users else {"name": "", "phone": "", "email": ""}
+
+    # Today's date
+    import datetime
+    now = datetime.datetime.now()
+    context["today"] = now.strftime("%d-%m-%Y")
+    context["today_time"] = now.strftime("%d-%m-%Y %H:%M")
 
     return frappe.render_template(template, context)
