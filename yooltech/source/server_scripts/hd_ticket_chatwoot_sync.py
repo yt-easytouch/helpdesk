@@ -19,12 +19,14 @@
 #      are no longer read here). JOOJI opt-out, "Send customer-facing messages", WhatsApp pause, Test numbers and
 #      the rate limit are all still enforced inside "Chatwoot API".
 #   2. Resolved/Closed: label "ticket-resolved" on the conversation
+# "Sales" (2026-10-22) is an internal intake lane (Kanban column SALES, Server Script "HD Ticket Source Team"):
+# a change INTO Sales sends nothing to the customer; moving OUT of it (Assigned / In Progress ...) sends as usual.
 # Everything goes through the outbound door (Chatwoot API) and is logged in Chatwoot Sync Log there.
 # A Chatwoot problem never blocks saving the ticket.
 
 # Everything (settings, passwords, int(), run_script) is inside try: nothing here may block the ticket save.
 try:
-	if doc.has_value_changed("status") and not doc.flags.in_insert:
+	if doc.has_value_changed("status") and not doc.flags.in_insert and doc.status != "Sales":
 		s = frappe.get_cached_doc("Chatwoot Settings")
 		if s.enabled:
 			ikey = s.get_password("internal_key", raise_exception=False)

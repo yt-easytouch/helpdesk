@@ -16,11 +16,13 @@ la rakibi karo: `yooltech/yool_theme`. Koodka Helpdesk-ka laftiisa waxba lagama 
   soo dejinta Word.
 - **Noocyada cilada** — 45 nooc, ticket wuxuu yeelan karaa noocyo badan, lama xiri karo nooc la'aan.
 - **Kooxaha** — "Technical" ayaa go'aamiya cidda injineer ah; "Sales" ticket-yadeeda waxay fariin u diraan
-  kooxda Technical.
+  kooxda Technical, waxayna ku dhacaan tiirka **SALES** ee Kanban-ka (ka hor CUSUB); Technical ayaa ka qaada
+  (Assigned / In Progress). Macmiilka fariin looma diro marka ticket-ku SALES galo. Numbarrada kooxaha waxaa
+  laga beddelaa Kanban-ka: "⚙ Team numbers / Numbarrada kooxaha" (maamulayaasha keliya).
 - **Naqshadda Figma** — sidebar-ka Desk, Helpdesk, CRM iyo portal-ka.
 
 **Waxa aan git-ka la gelin (admin-ka ayaa gacanta ku gelinaya):** furayaasha Chatwoot (API token, webhook key,
-internal key), lambarada taleefanka kooxaha (Chatwoot Settings → "Sales alert" fields), xubnaha kooxaha
+internal key), lambarada taleefanka kooxaha (Chatwoot Settings → "Numberka Kooxda Technical / Sales"), xubnaha kooxaha
 Technical/Sales, iyo xog kasta oo macaamiil ah.
 
 **Rakibaadda:** `bench --site <site> install-app yool_theme` kadibna `bench --site <site> migrate`.

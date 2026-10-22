@@ -6,6 +6,9 @@
 #   action=save  (Agent Manager / System Manager), payload {default_template?, rows: [{status, enabled, message}]}
 #   action=pause (Agent Manager / System Manager), payload {paused: 1|0} -> stops / allows every automatic WhatsApp
 #                (customers and agents; private notes still go). Each change leaves a Chatwoot Sync Log row.
+#   action=team_numbers (Agent Manager / System Manager), payload {tech_phone, sales_phone} -> saves the Sales-alert team
+#                numbers (Chatwoot Settings sales_alert_tech_phone / sales_alert_sales_phone; normalized/validated by the
+#                Before Save Server Script "Chatwoot Settings Team Numbers"). The numbers are returned to managers only.
 # Rows live in Chatwoot Settings.status_messages; a status without a row (or with an empty message) uses the
 # default template; a row with enabled=0 means "send nothing for this status".
 
@@ -63,6 +66,18 @@ if action == "pause":
 			"error": ("Paused" if paused else "Resumed") + " by " + frappe.get_fullname(user)}).insert(ignore_permissions=True)
 	s = frappe.get_doc("Chatwoot Settings")
 
+if action == "team_numbers":
+	if not can_edit:
+		frappe.throw("Only Agent Managers can change the team numbers.  /  Maamulayaasha keliya ayaa beddeli kara numbarrada kooxaha.", frappe.PermissionError)
+	old_numbers = [s.get("sales_alert_tech_phone") or "", s.get("sales_alert_sales_phone") or ""]
+	s.sales_alert_tech_phone = str(payload.get("tech_phone") or "").strip()
+	s.sales_alert_sales_phone = str(payload.get("sales_phone") or "").strip()
+	s.save(ignore_permissions=True)
+	s = frappe.get_doc("Chatwoot Settings")
+	new_numbers = [s.get("sales_alert_tech_phone") or "", s.get("sales_alert_sales_phone") or ""]
+	frappe.get_doc({"doctype": "Chatwoot Sync Log", "direction": "Outbound", "status": "Success", "event": "team_numbers",
+		"error": ("Team numbers saved (no change)" if old_numbers == new_numbers else "Team numbers changed") + " by " + frappe.get_fullname(user)}).insert(ignore_permissions=True)
+
 rows = []
 for x in s.status_messages or []:
 	rows.append({"status": x.status, "enabled": 1 if x.enabled else 0, "message": x.message or ""})
@@ -75,3 +90,5 @@ frappe.flags.templates = {
 	"placeholders": PLACEHOLDERS,
 	"rows": rows,
 }
+if can_edit:
+	frappe.flags.templates["team_numbers"] = {"tech_phone": s.get("sales_alert_tech_phone") or "", "sales_phone": s.get("sales_alert_sales_phone") or ""}

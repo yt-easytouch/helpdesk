@@ -105,6 +105,16 @@ Technical, after `agent_group`); **HD Ticket Source Team** (Before Save, new tic
 creator's team; **HD Ticket Sales Alert** (After Insert) sends ONE WhatsApp brief about every new Sales ticket
 to the Technical team number. Team members are **not** shipped (see Configuration).
 
+**Sales lane**: HD Ticket Status **Sales** (category Open; Kanban column label "SALES" from HD Kanban Settings,
+shown before CUSUB). HD Ticket Source Team puts new Sales tickets there instead of the default new status, and
+keeps them there when Helpdesk's own "customer replied" reset would move them back to New; the Technical team
+drags them on to Assigned / In Progress. HD Ticket Chatwoot Sync sends no customer message for a change INTO
+Sales. Team numbers: Chatwoot Settings `sales_alert_tech_phone` ("Numberka Kooxda Technical (WhatsApp)",
+receives the alert; empty = no alert + a Skipped Sync Log row) and `sales_alert_sales_phone` ("Numberka Kooxda
+Sales", shown in the alert), normalized by **Chatwoot Settings Team Numbers** (Before Save, same rule as caller
+phones). Managers edit them in the Kanban: column ⋮ menu or the WhatsApp switch menu → "⚙ Team numbers /
+Numbarrada kooxaha" (API `chatwoot_message_templates` action `team_numbers`).
+
 ### 9. Figma theme
 - HD Form Scripts **Helpdesk Figma Theme** (new-ticket page) and **Helpdesk Figma Theme Ticket** (ticket page),
   same code: restyle the Helpdesk agent sidebar (Figma Side Menu 10450:5374, Manrope, brand `#1db487`, Figma
@@ -136,11 +146,11 @@ bench build --app yool_theme && bench --site <site> clear-cache && bench restart
 
 What install does:
 1. `before_install` / `before_migrate`: creates Module Def "Yool Chatwoot" and the HD Ticket Property Setter.
-2. Frappe imports `fixtures/*.json` (Module Def, 17 DocTypes, Property Setter, 31 Custom Fields, 24 Server
+2. Frappe imports `fixtures/*.json` (Module Def, 17 DocTypes, Property Setter, 31 Custom Fields, 25 Server
    Scripts, 8 Client Scripts, 5 HD Form Scripts, 2 Print Formats, 1 Report, 2 HD Views).
 3. `after_install` / `after_migrate`: re-imports the same files **in dependency order** (Frappe's own pass is
    unordered, so a fresh site may skip some files the first time), then seeds — only when missing — the 45
-   ticket types, HD Teams Technical/Sales (no members), the 7 HD Ticket Template "Default" rows, the default
+   ticket types, HD Ticket Status "Sales", HD Teams Technical/Sales (no members), the 7 HD Ticket Template "Default" rows, the default
    Kanban column config, the two Word templates + two logos as File records, and `Expense Bill.hd_ticket`
    when the Expense Bill DocType exists.
 
@@ -183,15 +193,15 @@ re-apply the documented scrubs (see below) before committing. Regenerate `yoolte
 ## Installing on my.yool.tech itself (currently configured by hand)
 
 The fixtures equal the live records except for the scrubs below, so a migrate only rewrites them. Immediately
-after the first migrate set **Chatwoot Settings → Sales alert: Technical team number / Sales team number**,
-otherwise Sales alerts stop (the live script still has the numbers in code). Teams, ticket types, templates and
-Kanban config already exist and are left alone.
+after the first migrate check **Chatwoot Settings → Numberka Kooxda Technical (WhatsApp) / Numberka Kooxda
+Sales** (live site: already set). Teams, ticket types, the Sales status, templates and Kanban config already
+exist and are left alone.
 
 ## Differences from the live site (scrubs)
 
 | Item | Repo version |
 |---|---|
-| HD Ticket Sales Alert | team numbers read from Chatwoot Settings (`sales_alert_*`, 2 new custom fields); no alert when empty |
+| Chatwoot Settings `sales_alert_*` | values (team phone numbers) are not shipped; set them after install |
 | Phone examples in validation messages (HD Ticket Caller Validation, Ticket Kanban, Chatwoot API comment) | `+2526XXXXXXXX`, `06XXXXXXXX`, `+44XXXXXXXXXX` |
 | HD Teams | no members, no WhatsApp group id, no assignment rule (Helpdesk creates the rule) |
 | Word templates | author metadata set to "Yooltech"; unused ink/signature parts removed from the team template |

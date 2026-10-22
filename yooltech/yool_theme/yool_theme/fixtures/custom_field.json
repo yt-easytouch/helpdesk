@@ -302,28 +302,28 @@
   "unique": 0
  },
  {
-  "description": "Shown in the Sales alert text so technicians can call Sales back. Optional.",
+  "description": "Sales alert: shown in the alert text so technicians can call Sales back. Optional.",
   "doctype": "Custom Field",
   "dt": "Chatwoot Settings",
   "fieldname": "sales_alert_sales_phone",
   "fieldtype": "Data",
   "insert_after": "sales_alert_tech_phone",
-  "label": "Sales alert: Sales team number",
+  "label": "Numberka Kooxda Sales",
   "module": null,
   "name": "Chatwoot Settings-sales_alert_sales_phone",
-  "options": "Phone"
+  "options": null
  },
  {
-  "description": "WhatsApp number (E.164, e.g. +2526XXXXXXXX) that receives one brief per new Sales ticket. Empty = no Sales alert.",
+  "description": "Sales alert: WhatsApp number that receives one brief per new Sales ticket (Somali or +country code). Empty = no Sales alert. Also editable in the Kanban: ⚙ Team numbers.",
   "doctype": "Custom Field",
   "dt": "Chatwoot Settings",
   "fieldname": "sales_alert_tech_phone",
   "fieldtype": "Data",
   "insert_after": "notify_agents",
-  "label": "Sales alert: Technical team number",
+  "label": "Numberka Kooxda Technical (WhatsApp)",
   "module": null,
   "name": "Chatwoot Settings-sales_alert_tech_phone",
-  "options": "Phone"
+  "options": null
  },
  {
   "alignment": "",

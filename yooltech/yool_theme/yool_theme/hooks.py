@@ -112,6 +112,7 @@ fixtures = [
 			"Chatwoot Inbound",
 			"Chatwoot Message Templates",
 			"Chatwoot Poll",
+			"Chatwoot Settings Team Numbers",
 			"Chatwoot Webhook",
 			"Chatwoot Webhook Old URL",
 			"Engineer Monthly Report Permission",

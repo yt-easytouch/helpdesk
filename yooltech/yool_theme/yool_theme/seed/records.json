@@ -22,7 +22,7 @@
    "src": "public/yooltech_files/tmr_cover_logo.png"
   }
  ],
- "hd_kanban_settings_default_config": "{\"columns\":{\"New\":{\"label\":\"Cusub\"},\"Escalated\":{\"hidden\":true},\"Waiting for Vendor\":{\"hidden\":true},\"Closed\":{\"hidden\":true},\"Reopened\":{\"hidden\":true},\"On Hold\":{\"hidden\":true},\"Pending Customer\":{\"hidden\":true},\"Paused\":{\"color\":\"#ECAD4B\"}}}",
+ "hd_kanban_settings_default_config": "{\"columns\":{\"New\":{\"label\":\"Cusub\"},\"Escalated\":{\"hidden\":true},\"Waiting for Vendor\":{\"hidden\":true},\"Closed\":{\"hidden\":true},\"Reopened\":{\"hidden\":true},\"On Hold\":{\"hidden\":true},\"Pending Customer\":{\"hidden\":true},\"Paused\":{\"color\":\"#ECAD4B\"},\"Sales\":{\"label\":\"SALES\",\"color\":\"#7F56D9\",\"order\":-1}}}",
  "hd_team": [
   {
    "disabled": 0,
@@ -497,6 +497,17 @@
    "sort_options": 0,
    "translatable": 0,
    "unique": 0
+  }
+ ],
+ "hd_ticket_status": [
+  {
+   "doctype": "HD Ticket Status",
+   "name": "Sales",
+   "label_agent": "Sales",
+   "category": "Open",
+   "color": "Violet",
+   "order": 0,
+   "enabled": 1
   }
  ]
 }

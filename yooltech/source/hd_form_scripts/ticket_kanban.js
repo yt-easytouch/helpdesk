@@ -16,6 +16,11 @@
 // - Sales/Technical intake: HD Ticket.source_team ("Ka yimid"). New-ticket "Team" picker (default = the user's HD Team
 //   Sales/Technical), "Sales" card badge, preview "Ka yimid" line, Who → Team filter. Sales tickets WhatsApp the
 //   Technical team (Server Script "HD Ticket Sales Alert"; the form passes its Assign-to pick as yool_assign_to).
+// - Sales lane (2026-10-22): HD Ticket Status "Sales" (category Open) = column SALES, shown before CUSUB
+//   (HD Kanban Settings config). New Sales tickets start there ("HD Ticket Source Team"); Technical drags them on to
+//   Assigned / In Progress. Entering Sales sends no customer WhatsApp ("HD Ticket Chatwoot Sync").
+//   Managers: "⚙ Team numbers / Numbarrada kooxaha" (column ⋮ menu and the WhatsApp switch menu) edits the
+//   Sales-alert numbers in Chatwoot Settings through chatwoot_message_templates action=team_numbers.
 // - Card "⋮" menu / Space opens a Preview panel on the right (?preview=<ticket> in the URL), fed by the API
 //   server script "yool_ticket_preview"; status / priority / assignment changes there update the card.
 // No Helpdesk files are changed. Customers never get this view (agent route only).
@@ -598,9 +603,10 @@ function setupForm({ router }) {
 			if (!canEdit) return toast("Only managers can pause or resume WhatsApp messages.", false);
 			showMenu2(
 				waBtn,
-				waPaused
+				(waPaused
 					? [{ label: "Resume WhatsApp messages", onClick: () => setWa(false) }]
 					: [{ label: "Pause all WhatsApp messages", danger: true, onClick: () => setWa(true) }]
+				).concat([{ label: "⚙  Team numbers / Numbarrada kooxaha", onClick: () => openTeamNumbers() }])
 			);
 		});
 		api("chatwoot_message_templates", { action: "get" })
@@ -708,7 +714,19 @@ function setupForm({ router }) {
 		const sharedOrder = (s) => (colSettings(s).order != null ? colSettings(s).order : defaultOrder(s));
 		const ordered = () => {
 			const mine = Array.isArray(layout.order) ? layout.order : [];
-			const rank = (s) => (mine.indexOf(s.name) >= 0 ? mine.indexOf(s.name) : 10000 + sharedOrder(s));
+			// A column missing from the user's saved order (e.g. the new SALES) is slotted in before the first saved
+			// column that comes after it in the shared order, instead of landing at the far end.
+			const rank = (s) => {
+				const i = mine.indexOf(s.name);
+				if (i >= 0) return i;
+				if (!mine.length) return 10000 + sharedOrder(s);
+				const so = sharedOrder(s);
+				const j = mine.findIndex((n) => {
+					const x = statuses.find((y) => y.name === n);
+					return x && sharedOrder(x) > so;
+				});
+				return (j >= 0 ? j : mine.length) - 0.5 + (so + 5000) / 1e7;
+			};
 			return statuses.slice().sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 		};
 
@@ -2498,6 +2516,114 @@ function setupForm({ router }) {
 			paint();
 			return b;
 		};
+		// Managers only: Sales-alert team numbers (Chatwoot Settings sales_alert_tech_phone / sales_alert_sales_phone).
+		// Read + saved through chatwoot_message_templates (action get / team_numbers); the server normalizes and validates
+		// (Server Script "Chatwoot Settings Team Numbers") and returns numbers to managers only.
+		const openTeamNumbers = async () => {
+			if (!canEdit) return toast("Only managers can change the team numbers.", false);
+			let data;
+			try {
+				data = ((await api("chatwoot_message_templates", { action: "get" })) || {}).templates || {};
+			} catch (e) {
+				return toast("Could not load the team numbers: " + e.message, false);
+			}
+			const nums = data.team_numbers || {};
+			const returnFocus = document.activeElement;
+			const overlay = el("div", "position:fixed;inset:0;z-index:9990;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(7,10,14,0.4);font-family:" + T.font + ";");
+			overlay.dataset.yoolPop = "1";
+			overlay.dataset.yoolTeamNumbers = "1";
+			const box = el(
+				"div",
+				"width:min(460px,100%);box-sizing:border-box;padding:24px;border-radius:0;border:1px solid " + T.border + ";background:" + T.surface + ";" +
+					"color:" + T.text900 + ";box-shadow:0 24px 48px -12px rgba(16,24,32,0.18);display:flex;flex-direction:column;gap:14px;"
+			);
+			box.setAttribute("role", "dialog");
+			box.setAttribute("aria-modal", "true");
+			box.setAttribute("aria-labelledby", "yool-tn-title");
+			const title = el("div", "font:600 16px/24px " + T.font + ";", "⚙ Team numbers / Numbarrada kooxaha");
+			title.id = "yool-tn-title";
+			const intro = el(
+				"div",
+				"font:500 13px/20px " + T.font + ";color:" + T.text500 + ";",
+				"Ticket cusub oo Sales ka yimid wuxuu WhatsApp u diraa numberka Technical; numberka Sales waxaa lagu qoraa fariinta. / " +
+					"A new Sales ticket WhatsApps the Technical number; the Sales number is shown in that message."
+			);
+			const input = (value, ph) => {
+				const i = el(
+					"input",
+					"height:40px;padding:8px 12px;box-sizing:border-box;border-radius:0;border:1px solid " + T.border + ";background:" + T.surface + ";" +
+						"color:" + T.text900 + ";font:500 14px/20px " + T.font + ";outline:none;width:100%;"
+				);
+				i.type = "tel";
+				i.value = value || "";
+				i.placeholder = ph;
+				i.addEventListener("focus", () => (i.style.borderColor = T.brand));
+				i.addEventListener("blur", () => (i.style.borderColor = T.border));
+				return i;
+			};
+			const fld = (label, help, control) => {
+				const f = el("label", "display:flex;flex-direction:column;gap:6px;");
+				f.append(el("span", "font:600 14px/20px " + T.font + ";color:" + T.text900 + ";", label), control, el("span", "font:500 12px/18px " + T.font + ";color:" + T.text300 + ";", help));
+				return f;
+			};
+			const tech = input(nums.tech_phone, "+2526XXXXXXXX");
+			tech.dataset.yoolTn = "tech";
+			const sales = input(nums.sales_phone, "+2526XXXXXXXX");
+			sales.dataset.yoolTn = "sales";
+			const err = el("div", "display:none;font:500 13px/20px " + T.font + ";color:#b42318;");
+			const btns = el("div", "display:flex;justify-content:flex-end;gap:12px;margin-top:4px;");
+			const cancel = btnSecondary("Cancel");
+			const ok = btnPrimary("Save");
+			cancel.style.borderRadius = ok.style.borderRadius = "0";
+			btns.append(cancel, ok);
+			box.append(
+				title,
+				intro,
+				fld("Numberka Kooxda Technical (WhatsApp)", "Wuxuu helaa digniinta Sales / Receives the Sales alert. Bannaan = digniin lama diro / Empty = no alert.", tech),
+				fld("Numberka Kooxda Sales", "Waxaa lagu qoraa fariinta / Shown in the alert text.", sales),
+				err,
+				btns
+			);
+			overlay.append(box);
+			document.body.append(overlay);
+			tech.focus();
+			const close = () => {
+				overlay.remove();
+				document.removeEventListener("keydown", onKey, true);
+				if (returnFocus && returnFocus.focus) returnFocus.focus();
+			};
+			const onKey = (e) => {
+				if (e.key === "Escape") {
+					e.stopPropagation();
+					close();
+				} else if (e.key === "Enter" && (e.target === tech || e.target === sales)) {
+					e.preventDefault();
+					ok.click();
+				}
+			};
+			document.addEventListener("keydown", onKey, true);
+			overlay.addEventListener("mousedown", (e) => {
+				if (e.target === overlay) close();
+			});
+			cancel.addEventListener("click", close);
+			ok.addEventListener("click", async () => {
+				ok.disabled = true;
+				ok.textContent = "Saving…";
+				err.style.display = "none";
+				try {
+					const m = await api("chatwoot_message_templates", { action: "team_numbers", payload: { tech_phone: tech.value.trim(), sales_phone: sales.value.trim() } }, true);
+					const saved = ((m || {}).templates || {}).team_numbers || {};
+					close();
+					toast("Team numbers saved / Waa la keydiyay: Technical " + (saved.tech_phone || "—") + " · Sales " + (saved.sales_phone || "—"), true);
+				} catch (e) {
+					err.textContent = e.message;
+					err.style.display = "block";
+					ok.disabled = false;
+					ok.textContent = "Save";
+				}
+			});
+		};
+		state.openTeamNumbers = openTeamNumbers;
 		const openMsgEditor = async (list) => {
 			let data;
 			try {
@@ -2955,6 +3081,7 @@ function setupForm({ router }) {
 			reset: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.5"/><path d="M4 4v4.5h4.5"/></svg>',
 			hide: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A9.7 9.7 0 0 1 12 5c5 0 8.5 4.5 9.5 7a13 13 0 0 1-2.6 3.7M6.6 6.6A13.3 13.3 0 0 0 2.5 12c1 2.5 4.5 7 9.5 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
 			pin: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3Z"/></svg>',
+			gear: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>',
 		};
 		// The panel lives in the shared popover slot (outside click / Esc / resize close it); render() closes it too.
 		const closeMenu = () => {
@@ -3062,7 +3189,7 @@ function setupForm({ router }) {
 			// WhatsApp text customers get when a ticket enters this column; the tag shows its state at a glance.
 			const wr = (waInfo.rows || []).find((x) => x.status === s.name);
 			const off = !!(wr && !wr.enabled);
-			const state = waInfo.whatsapp_paused ? ["Paused", "#b42318", dark ? "rgba(217,45,32,0.16)" : "#fef3f2"] : off ? ["Off", T.text500, T.subtle] : ["On", T.brandSoftText, T.brandSoftBg];
+			const state = s.name === "Sales" ? ["Internal", T.text500, T.subtle] : waInfo.whatsapp_paused ? ["Paused", "#b42318", dark ? "rgba(217,45,32,0.16)" : "#fef3f2"] : off ? ["Off", T.text500, T.subtle] : ["On", T.brandSoftText, T.brandSoftBg];
 			const tag = el("span", "flex:0 0 auto;padding:0 8px;border-radius:120px;font:500 12px/20px " + T.font + ";color:" + state[1] + ";background:" + state[2] + ";", state[0]);
 			const trail = el("span", "display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;");
 			const chev = icn(ARROW.chevron, 16);
@@ -3076,6 +3203,7 @@ function setupForm({ router }) {
 				if (colSettings(s).label) row(MENU_ICON.reset, "Reset name", () => updateColumn(s.name, { label: null }));
 				row(MENU_ICON.hide, "Hide column", () => updateColumn(s.name, { hidden: true }));
 				row(MENU_ICON.pin, "Use my order for everyone", saveOrderForEveryone);
+				row(MENU_ICON.gear, "Team numbers / Numbarrada kooxaha", () => openTeamNumbers());
 				// Color for everyone: one line of swatches, the current one ringed.
 				const current = String(colColor(s)).toLowerCase();
 				const sw = el("div", "display:flex;align-items:center;justify-content:space-between;padding:10px 10px 6px;");

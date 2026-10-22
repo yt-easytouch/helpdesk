@@ -8,7 +8,7 @@ Why this exists (Frappe 16 + Helpdesk 1.26 facts):
   as any Custom Field is added to HD Ticket. before_install / before_migrate create the Property Setter
   (default = 0) before any fixture is imported.
 - Data-like records are seeded only when missing, never overwritten (admins own them after install):
-  HD Ticket Types, HD Teams "Technical"/"Sales" (no members), the rows of HD Ticket Template "Default",
+  HD Ticket Types, HD Ticket Status "Sales" (Sales intake lane), HD Teams "Technical"/"Sales" (no members), the rows of HD Ticket Template "Default",
   the default HD Kanban Settings config, the Word templates/logos and the optional Expense Bill link field.
 
 Every step logs and continues on error: a problem here must never block `bench migrate`.
@@ -114,7 +114,7 @@ def seed_records():
 	except Exception as e:
 		_log("seed/records.json unreadable", e)
 		return
-	for step in (_seed_ticket_types, _seed_teams, _seed_template_fields, _seed_kanban, _seed_files, _seed_optional_fields):
+	for step in (_seed_ticket_types, _seed_ticket_statuses, _seed_teams, _seed_template_fields, _seed_kanban, _seed_files, _seed_optional_fields):
 		try:
 			step(data)
 			frappe.db.commit()
@@ -132,6 +132,13 @@ def _insert_missing(doc):
 
 def _seed_ticket_types(data):
 	for d in data.get("hd_ticket_type", []):
+		_insert_missing(d)
+
+
+def _seed_ticket_statuses(data):
+	# "Sales" = the Sales intake lane (Kanban column SALES, before CUSUB). HD Ticket Status is named by label_agent
+	# (Frappe keeps that field equal to the name), so the column label "SALES" lives in the Kanban settings.
+	for d in data.get("hd_ticket_status", []):
 		_insert_missing(d)
 
 
