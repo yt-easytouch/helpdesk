@@ -1,0 +1,12 @@
+--- a/desk/index.html
++++ b/desk/index.html
+@@ -198,6 +198,9 @@
+       href="/assets/helpdesk/desk/manifest/apple-splash-1136-640.jpg"
+       media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+     />
++    <!-- yool_theme: Figma theme (only needed if the yool_theme after_request hook is NOT used) -->
++    <link rel="stylesheet" href="/assets/yool_theme/css/helpdesk_theme.css" />
++    <script defer src="/assets/yool_theme/js/helpdesk_theme.js"></script>
+   </head>
+   <body>
+     <div id="app"></div>

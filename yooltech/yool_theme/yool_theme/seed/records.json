@@ -1,0 +1,502 @@
+{
+ "_comment": "Inserted only when missing (after_install / after_migrate); never overwrites admin changes.",
+ "files": [
+  {
+   "file_url": "/private/files/template_engineer_report.docx",
+   "is_private": 1,
+   "src": "public/yooltech_files/template_engineer_report.docx"
+  },
+  {
+   "file_url": "/private/files/template_team_report.docx",
+   "is_private": 1,
+   "src": "public/yooltech_files/template_team_report.docx"
+  },
+  {
+   "file_url": "/files/emr_yooltech_logo.png",
+   "is_private": 0,
+   "src": "public/yooltech_files/emr_yooltech_logo.png"
+  },
+  {
+   "file_url": "/files/tmr_cover_logo.png",
+   "is_private": 0,
+   "src": "public/yooltech_files/tmr_cover_logo.png"
+  }
+ ],
+ "hd_kanban_settings_default_config": "{\"columns\":{\"New\":{\"label\":\"Cusub\"},\"Escalated\":{\"hidden\":true},\"Waiting for Vendor\":{\"hidden\":true},\"Closed\":{\"hidden\":true},\"Reopened\":{\"hidden\":true},\"On Hold\":{\"hidden\":true},\"Pending Customer\":{\"hidden\":true},\"Paused\":{\"color\":\"#ECAD4B\"}}}",
+ "hd_team": [
+  {
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Team",
+   "ignore_restrictions": 0,
+   "name": "Technical",
+   "team_name": "Technical"
+  },
+  {
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Team",
+   "ignore_restrictions": 0,
+   "name": "Sales",
+   "team_name": "Sales"
+  }
+ ],
+ "hd_ticket_template_default_fields": [
+  {
+   "fieldname": "erp_customer",
+   "hide_from_customer": 1,
+   "placeholder": "Dooro shirkadda",
+   "required": 0
+  },
+  {
+   "fieldname": "primary_contact_name",
+   "hide_from_customer": 0,
+   "placeholder": "",
+   "required": 0
+  },
+  {
+   "fieldname": "caller_name",
+   "hide_from_customer": 0,
+   "placeholder": "Magaca qofka soo wacay",
+   "required": 1
+  },
+  {
+   "fieldname": "caller_phone",
+   "hide_from_customer": 0,
+   "placeholder": "061xxxxxxx",
+   "required": 1
+  },
+  {
+   "fieldname": "caller_role",
+   "hide_from_customer": 1,
+   "placeholder": "Tusaale: Accountant",
+   "required": 0
+  },
+  {
+   "fieldname": "solved_by",
+   "hide_from_customer": 1,
+   "placeholder": "Office / Visit / WhatsApp",
+   "required": 0
+  },
+  {
+   "fieldname": "time_spent",
+   "hide_from_customer": 1,
+   "placeholder": "h:mm, e.g. 1:30",
+   "required": 0
+  }
+ ],
+ "hd_ticket_type": [
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Accounting Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Add Items"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Answering Questions"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Batch Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Clearing System"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Computer Setup"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Data Export"
+  },
+  {
+   "description": "Added from the Kanban type picker",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Doctor Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "EasyTouch App"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "EtShop"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Excel Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Expense Bill Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "HR Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Item Change"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Item Manager Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Logo / Branding"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Manager Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Mobile/Desktop View"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Network Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Order Call Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "POS Display"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "POS Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "POS Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Password Reset"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Payment Setup"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Payment Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Presentation"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Printer Format"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Printer Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Printer Setup"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Purchase Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Recording Video"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Report Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Sadar SMS"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Sales Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Shift Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Stock Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Stock Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Supplier Setup"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "System Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "System Setup"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "System Training"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "UOM Issue"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "User Permission"
+  },
+  {
+   "description": "",
+   "disabled": 0,
+   "docstatus": 0,
+   "doctype": "HD Ticket Type",
+   "is_system": 0,
+   "name": "Water Users"
+  }
+ ],
+ "optional_custom_fields": [
+  {
+   "alignment": "",
+   "allow_bulk_edit": 0,
+   "allow_in_quick_entry": 0,
+   "allow_on_submit": 1,
+   "bold": 0,
+   "button_color": "",
+   "collapsible": 0,
+   "columns": 0,
+   "description": "Helpdesk ticket this expense was for (optional). The Customer field links the expense to the company.",
+   "docstatus": 0,
+   "doctype": "Custom Field",
+   "dt": "Expense Bill",
+   "fetch_if_empty": 0,
+   "fieldname": "hd_ticket",
+   "fieldtype": "Link",
+   "hidden": 0,
+   "hide_border": 0,
+   "hide_days": 0,
+   "hide_seconds": 0,
+   "ignore_user_permissions": 0,
+   "ignore_xss_filter": 0,
+   "in_global_search": 0,
+   "in_list_view": 0,
+   "in_preview": 0,
+   "in_standard_filter": 1,
+   "insert_after": "customer",
+   "is_system_generated": 0,
+   "is_virtual": 0,
+   "label": "HD Ticket",
+   "length": 0,
+   "mask": 0,
+   "name": "Expense Bill-hd_ticket",
+   "no_copy": 0,
+   "non_negative": 0,
+   "options": "HD Ticket",
+   "permlevel": 0,
+   "precision": "",
+   "print_hide": 0,
+   "print_hide_if_no_value": 0,
+   "read_only": 0,
+   "report_hide": 0,
+   "reqd": 0,
+   "search_index": 0,
+   "set_only_once": 0,
+   "show_dashboard": 0,
+   "sort_options": 0,
+   "translatable": 0,
+   "unique": 0
+  }
+ ]
+}

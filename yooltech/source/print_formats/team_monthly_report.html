@@ -1,0 +1,269 @@
+<style>
+/* Page setup. ".print-format" is read by Frappe's wkhtmltopdf PDF generator
+   (A4 portrait, 2cm margins = docx); @page covers Chrome-based PDF/preview. */
+.print-format { margin-top: 20mm; margin-bottom: 20mm; margin-left: 20mm; margin-right: 20mm; page-size: A4; orientation: Portrait; }
+@page { size: A4 portrait; margin: 20mm; }
+@media print { .print-format { margin: 0 !important; padding: 0 !important; } }
+
+.print-format .tmr { font-family: "Lato Light", "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 300; font-size: 11pt; color: #000; line-height: 1.3; }
+.print-format .tmr * { box-sizing: border-box; }
+.print-format .tmr p { margin: 0 0 8pt 0; }
+.print-format .tmr b, .print-format .tmr strong { font-weight: 700; }
+
+/* ---- cover (positions taken from the docx text boxes, mm from the margin box) */
+.print-format .tmr .tmr-cover { position: relative; height: 250mm; page-break-after: always; }
+.print-format .tmr .tmr-cover .mont { font-family: "Montserrat ExtraLight", "Montserrat Light", "Montserrat", "Lato", Arial, sans-serif; font-weight: 300; }
+.print-format .tmr .tmr-month { position: absolute; top: 10mm; left: 100mm; width: 70mm; text-align: center; font-size: 28pt; z-index: 2; }
+.print-format .tmr .tmr-cover-logo { position: absolute; top: 24mm; left: 0; width: 100%; text-align: center; z-index: 1; }
+.print-format .tmr .tmr-cover-logo img { width: 150mm; height: auto; }
+.print-format .tmr .tmr-line1 { position: absolute; top: 179mm; left: 0; width: 100%; font-size: 36pt; letter-spacing: 1px; }
+.print-format .tmr .tmr-line2 { position: absolute; top: 199mm; left: 0; width: 100%; font-size: 36pt; letter-spacing: 1px; }
+.print-format .tmr .tmr-wordmark { position: absolute; top: 240mm; left: 0; }
+.print-format .tmr .tmr-wordmark img { width: 52mm; height: auto; }
+
+/* ---- headings: Montserrat Light 14pt, exactly the docx strings */
+.print-format .tmr .tmr-h { font-family: "Montserrat Light", "Montserrat", "Lato", Arial, sans-serif; font-weight: 300; font-size: 14pt; margin: 18pt 0 10pt 0; page-break-after: avoid; }
+
+/* ---- NUXURKA sentences */
+.print-format .tmr .tmr-nx { margin: 0 0 9pt 0; }
+.print-format .tmr .tmr-nx b { font-weight: 700; }
+
+/* ---- tables (docx grid look: thin black borders, header repeats across pages) */
+.print-format .tmr table.tmr-t { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 0 10pt 0; }
+.print-format .tmr table.tmr-t th,
+.print-format .tmr table.tmr-t td { border: 0.5pt solid #000 !important; padding: 3pt 5pt !important; font-size: 10pt; text-align: left; vertical-align: middle !important; word-wrap: break-word; overflow-wrap: break-word; }
+.print-format .tmr table.tmr-t th { font-weight: 700; background: transparent; }
+.print-format .tmr table.tmr-t thead { display: table-header-group; }
+.print-format .tmr table.tmr-t tr { page-break-inside: avoid; }
+.print-format .tmr table.tmr-t td.num, .print-format .tmr table.tmr-t th.num { text-align: left; }
+.print-format .tmr table.tmr-t tr.total td { font-weight: 700; }
+.print-format .tmr table.tmr-sum td.lbl { font-weight: 700; vertical-align: middle !important; }
+.print-format .tmr table.tmr-sum td.hd { font-weight: 700; }
+
+/* ---- MEELMARINTA */
+.print-format .tmr .tmr-sign { page-break-inside: avoid; margin-top: 14pt; }
+.print-format .tmr .tmr-sign p { margin: 0 0 4pt 0; }
+.print-format .tmr .tmr-sign .gap { height: 10pt; }
+.print-format .tmr .tmr-sign .line { border-bottom: 0.5pt solid #000; height: 14pt; margin-bottom: 6pt; }
+</style>
+
+{%- macro money(v) -%}${{ "%.2f"|format((v or 0)|float) }}{%- endmacro -%}
+
+<div class="tmr">
+
+  <!-- ================= COVER ================= -->
+  <div class="tmr-cover">
+    <div class="tmr-cover-logo"><img src="/files/tmr_cover_logo.png" alt="Yooltech"></div>
+    <div class="tmr-month mont">{{ (doc.month_label or "")|e }}</div>
+    <div class="tmr-line1 mont">WARBIXIN BILAHA AH EE</div>
+    <div class="tmr-line2 mont">XAFIISKA FARSAMADA</div>
+    <div class="tmr-wordmark"><img src="/files/emr_yooltech_logo.png" alt="Yooltech"></div>
+  </div>
+
+  <!-- ================= HORDHAC ================= -->
+  <div class="tmr-h">HORDHAC</div>
+  <div class="tmr-rich">{{ doc.hordhac or "" }}</div>
+
+  <!-- ================= NUXURKA ================= -->
+  <div class="tmr-h">NUXURKA WARBIXINTA BISHAN</div>
+  <p class="tmr-nx"><b>Ciladaha:</b> {{ (doc.nuxur_cilado or "")|e }}</p>
+  <p class="tmr-nx"><b>Macaamiisha:</b> {{ (doc.nuxur_macaamiil or "")|e }}</p>
+  <p class="tmr-nx"><b>Injineerada:</b> {{ (doc.nuxur_injineer or "")|e }}</p>
+  <p class="tmr-nx"><b>Kharashaadka:</b> {{ (doc.nuxur_kharash or "")|e }}</p>
+
+  <!-- summary block: three stacked mini-tables (one table, vertically merged labels) -->
+  <table class="tmr-t tmr-sum">
+    <tr>
+      <td class="lbl" rowspan="2" style="width:28%;">Macaamiisha<br>Soo Hadashay</td>
+      <td class="hd" style="width:24%;">Fariin</td>
+      <td class="hd" style="width:24%;">Wicitaan</td>
+      <td class="hd" style="width:24%;">Booqasho</td>
+    </tr>
+    <tr>
+      <td>{{ doc.fariin_count or 0 }}</td>
+      <td>{{ doc.wicitaan_count or 0 }}</td>
+      <td>{{ doc.booqasho_count or 0 }}</td>
+    </tr>
+    <tr>
+      <td class="lbl" rowspan="2">Macaamiisha<br>Shaqooyinka loo qabtay</td>
+      <td class="hd">Macmiil Cusub</td>
+      <td class="hd">Cilado la xaliyay</td>
+      <td class="hd">Macmiil la booqday</td>
+    </tr>
+    <tr>
+      <td>{{ doc.new_clients_count or 0 }}</td>
+      <td>{{ doc.issues_resolved_count or 0 }}</td>
+      <td>{{ doc.clients_visited_count or 0 }}</td>
+    </tr>
+    <tr>
+      <td class="lbl" rowspan="2">Ciladaha<br>Macaamiisha</td>
+      <td class="hd">Wadarta</td>
+      <td class="hd">La xaliyay</td>
+      <td class="hd">Aan la xalin</td>
+    </tr>
+    <tr>
+      <td>{{ doc.total_issues or 0 }}</td>
+      <td>{{ doc.resolved_count or 0 }}</td>
+      <td>{{ doc.unresolved_count or 0 }}</td>
+    </tr>
+  </table>
+
+  <!-- ================= CILADAHA ================= -->
+  <div class="tmr-h">WARBIXNTA CILADAHA</div>
+  <p>Ciladaha bishaan ina soo gaaray waxey isugu jireen kuwo ciladahooda ay u baahantay in xarumahooda loogu tago iyo kuwa ciladahoodu ay fududaayeen oo lagu xaliyay hab online ah ayadoo la isticmaalayo RustDesk, Google Meating iyo Whatsapp mararka qaar.</p>
+  <p><b>Inta ugu badan ciladihi bishan in asoo gaaray waa laxaliyay marka laga reebo dhowr ciladood oo loo gudbiyay team ka developers ka kuwaasoo wali aan la xalin.</b></p>
+
+  <table class="tmr-t">
+    <thead><tr>
+      <th style="width:8%;">L .</th>
+      <th style="width:37%;">Nuuca Cilada</th>
+      <th style="width:15%;">Tirada</th>
+      <th style="width:17%;">Boqolkiiba</th>
+      <th style="width:23%;">Kharashaadka</th>
+    </tr></thead>
+    <tbody>
+    {%- set ns = namespace(n=0) %}
+    {%- for row in (doc.issue_rows or []) %}
+      <tr>
+        {%- if row.issue_type == "Lama xirin ticket" %}
+        <td></td>
+        {%- else %}{%- set ns.n = ns.n + 1 %}
+        <td>{{ ns.n }}</td>
+        {%- endif %}
+        <td>{{ (row.issue_type or "")|e }}</td>
+        <td class="num">{{ row.ticket_count or 0 }}</td>
+        <td class="num">{{ (row.pct or "")|e }}</td>
+        <td class="num">{{ money(row.expense) }}</td>
+      </tr>
+    {%- endfor %}
+      <tr class="total">
+        <td colspan="2">Wadarta Ciladaha</td>
+        <td class="num">{{ doc.total_issues or 0 }}</td>
+        <td class="num">100%</td>
+        <td class="num">{{ money(doc.total_expense) }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ================= MACAAMIISHA ================= -->
+  <div class="tmr-h">MACAAMIISHA SHAQOOYINKA LOO QABTAY</div>
+  <p><b>Waaxdeena waxa ay bishan u adeegtay {{ (doc.customer_rows or [])|length }} macmiil oo loo xaliyay {{ doc.total_issues or 0 }} ciladood waxaana inooga baxday lacag gaareysa {{ money(doc.total_expense) }} taasoo ka dhigeysa celcelis qarashaadka ku baxay cilad bixinta {{ money(doc.avg_expense_per_issue) }}</b></p>
+
+  <table class="tmr-t">
+    <thead><tr>
+      <th style="width:7%;">L</th>
+      <th style="width:33%;">Magaca Macmilka</th>
+      <th style="width:12%;">Ciladaha</th>
+      <th style="width:15%;">Boqolkiba</th>
+      <th style="width:16%;">Qarashka</th>
+      <th style="width:17%;">Boqolkiba</th>
+    </tr></thead>
+    <tbody>
+    {%- for row in (doc.customer_rows or []) %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ (row.customer_name or row.customer or "")|e }}</td>
+        <td class="num">{{ row.ticket_count or 0 }}</td>
+        <td class="num">{{ (row.ticket_pct or "")|e }}</td>
+        <td class="num">{{ money(row.expense) }}</td>
+        <td class="num">{{ (row.expense_pct or "")|e }}</td>
+      </tr>
+    {%- endfor %}
+      <tr class="total">
+        <td colspan="2">Wadarta Guud</td>
+        <td class="num">{{ doc.total_issues or 0 }}</td>
+        <td class="num">100.00%</td>
+        <td class="num">{{ money(doc.total_expense) }}</td>
+        <td class="num">100.00%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ================= INJINEERADA ================= -->
+  <div class="tmr-h">WAXQABADKA INJINEERADA FARSAMADA</div>
+  {%- set top_eng = ((doc.engineer_rows or []) | sort(attribute="ticket_count", reverse=True) | list | first) if (doc.engineer_rows or []) else None %}
+  <p>Injineeradeyna waxey bishan muujiyeen dadaal dheeri ah ayagoo si dag dag ah uga jawaabay ciladaha ina soo gaaraya bishan, waxaana ciladaha ugu badan bishan xaliyay <b>{{ (top_eng.engineer_name if top_eng else "")|e }}</b> oo xaliyay <b>{{ (top_eng.pct if top_eng else "")|e }}</b> ciladaha bishan.</p>
+
+  <table class="tmr-t">
+    <thead><tr>
+      <th style="width:32%;">Magaca</th>
+      <th style="width:17%;">Ciladaha guud</th>
+      <th style="width:17%;">Overtime</th>
+      <th style="width:17%;">Online</th>
+      <th style="width:17%;">Boqolkiiba</th>
+    </tr></thead>
+    <tbody>
+    {%- for row in (doc.engineer_rows or []) %}
+      <tr>
+        <td>{{ (row.engineer_name or "")|e }}</td>
+        <td class="num">{{ row.ticket_count or 0 }}</td>
+        <td class="num">{{ row.overtime_count or 0 }}</td>
+        <td class="num">{{ row.online_count or 0 }}</td>
+        <td class="num">{{ (row.pct or "")|e }}</td>
+      </tr>
+    {%- endfor %}
+      <tr class="total">
+        <td>Wadarta</td>
+        <td class="num">{{ doc.total_issues or 0 }} Cilad</td>
+        <td class="num">{{ (doc.engineer_rows or []) | map(attribute="overtime_count") | map("int") | sum }}</td>
+        <td class="num">{{ (doc.engineer_rows or []) | map(attribute="online_count") | map("int") | sum }}</td>
+        <td class="num">100%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ================= CAQABADAHA ================= -->
+  <div class="tmr-h">CAQABADAHA IYO XALKA</div>
+  <table class="tmr-t">
+    <thead><tr>
+      <th style="width:50%;">Caqabada</th>
+      <th style="width:50%;">Xalka</th>
+    </tr></thead>
+    <tbody>
+    {%- for row in (doc.challenges or []) %}
+      <tr><td>{{ (row.challenge or "")|e }}</td><td>{{ (row.solution or "")|e }}</td></tr>
+    {%- else %}
+      <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+    {%- endfor %}
+    </tbody>
+  </table>
+
+  <!-- ================= FALCELINTA ================= -->
+  <div class="tmr-h">FALCELINTA MACAAMIISHA</div>
+  <table class="tmr-t">
+    <thead><tr>
+      <th style="width:35%;">Magaca Macmiilka</th>
+      <th style="width:65%;">Falcelinta Macmiilka</th>
+    </tr></thead>
+    <tbody>
+    {%- for row in (doc.feedback_rows or []) %}
+      <tr><td>{{ (row.client_name or "")|e }}</td><td>{{ (row.feedback or "")|e }}</td></tr>
+    {%- else %}
+      <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+    {%- endfor %}
+    </tbody>
+  </table>
+
+  <!-- ================= MEELMARINTA ================= -->
+  <div class="tmr-h">MEELMARINTA WARBIXINTA</div>
+  <div class="tmr-sign">
+    <p><b>Diyaariyay</b></p>
+    <p>{{ (doc.prepared_by_name or "")|e }}</p>
+    <p>Head of technical engineer</p>
+    <p>Yooltech</p>
+    <div class="gap"></div>
+    <p><b>Saxiixa</b></p>
+    <div class="line"></div>
+    <p><b>Taariikhda</b></p>
+    <div class="line"></div>
+  </div>
+  <div class="tmr-sign">
+    <div class="gap"></div>
+    <p><b>Ansixiyay</b></p>
+    <p>Yooltech</p>
+    <p><b>saxiixa</b></p>
+    <div class="line"></div>
+    <p><b>Taariikhda</b></p>
+    <div class="line"></div>
+  </div>
+</div>
