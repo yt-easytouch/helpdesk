@@ -1,0 +1,297 @@
+/*
+ * yool_theme / helpdesk_theme.css  (Helpdesk 1.26 SPA: /helpdesk/*, agent desk AND customer portal)
+ *
+ * Loaded natively on every /helpdesk page (including a direct load of /helpdesk/home) by the
+ * after_request hook in yool_theme/theme_inject.py, or by the 2-line snippet in server_patch/.
+ *
+ * Design: Figma "UI-dinsg" Side Menu, node 10450:5374 (Type=Primary 10450:5450, rail Type=Dual 10450:5471)
+ *   white bg, 1px #dadadb border, Manrope; expanded width 256px (stock inline 224px), collapsed rail 50px kept;
+ *   items 36px, 20px stroke icons, 12px icon gap, 4px corners, 14px/500 #4a4c4f, hover #f0f0f1;
+ *   ACTIVE item brand green #1db487 with white text + icon; section labels uppercase #8f9193.
+ * Home dashboard (html.yool-fig-home, set by helpdesk_theme.js): #fafafa page, white #dadadb cards,
+ *   uppercase card labels, chart lines brand green.
+ *
+ * Coexists with the HD Form Script overlay window.__yoolFigTheme ("Helpdesk Figma Theme" / "... Ticket"):
+ * same values, and our icon masks draw the same Figma glyphs whether or not the overlay swapped the SVG.
+ */
+
+:root {
+	--yool-brand: #1db487;
+	--yool-brand-hover: #18a077;
+	--yool-text: #4a4c4f;
+	--yool-text-strong: #070a0e;
+	--yool-muted: #8f9193;
+	--yool-border: #dadadb;
+	--yool-hover: #f0f0f1;
+	--yool-font: "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* ---------- Sidebar shell ---------- */
+.bg-surface-menu-bar {
+	background: #fff !important;
+	border-color: var(--yool-border) !important;
+	font-family: var(--yool-font) !important;
+}
+.bg-surface-menu-bar[style*="224px"] {
+	min-width: 256px !important;
+	max-width: 256px !important;
+}
+/* workspace header (logo 32px r8, brand name bold) */
+.bg-surface-menu-bar[style*="224px"] > div:first-child {
+	padding: 16px 12px 8px !important;
+}
+.bg-surface-menu-bar > div:first-child > button {
+	border-radius: 4px !important;
+}
+.bg-surface-menu-bar > div:first-child > button:hover {
+	background: var(--yool-hover) !important;
+}
+.bg-surface-menu-bar button img {
+	border-radius: 8px !important;
+}
+.bg-surface-menu-bar button [class*="text-ink-gray-9"] {
+	font-weight: 800;
+	font-size: 15px;
+	color: var(--yool-text-strong);
+	letter-spacing: -0.01em;
+}
+.bg-surface-menu-bar button [class*="text-ink-gray-7"] {
+	color: var(--yool-muted);
+	font-size: 12px;
+	font-weight: 500;
+}
+
+/* ---------- Items ---------- */
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"] {
+	border-radius: 4px !important;
+	color: var(--yool-text);
+	transition: background-color 0.15s ease;
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:not(.bg-surface-selected):hover {
+	background: var(--yool-hover) !important;
+}
+.bg-surface-menu-bar[style*="224px"] div.cursor-pointer[class*="h-7"] {
+	height: 36px !important;
+	padding: 0 12px !important;
+	margin: 2px 12px !important;
+}
+.bg-surface-menu-bar[style*="224px"] div.cursor-pointer[class*="h-7"] > div {
+	margin-left: 12px !important;
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"] span.truncate {
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 20px;
+	color: var(--yool-text);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"] > span.shrink-0 {
+	color: var(--yool-text);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 20px;
+	min-height: 20px;
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"] > span.shrink-0 svg {
+	width: 20px !important;
+	height: 20px !important;
+}
+.bg-surface-menu-bar[style*="50px"] div.cursor-pointer[class*="h-7"] {
+	height: 32px !important;
+	padding-left: 6px !important;
+	padding-right: 6px !important;
+}
+/* Search shortcut badge (cmd K) */
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"] span.truncate + span {
+	border: 1px solid var(--yool-border);
+	border-radius: 4px;
+	background: #fafafa;
+	padding: 0 5px;
+	height: 20px;
+	font-size: 11px;
+	color: var(--yool-muted);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"] span.truncate + span svg {
+	width: 11px;
+	height: 11px;
+}
+/* ACTIVE item -> brand green, white text + icon */
+.bg-surface-menu-bar .bg-surface-selected,
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"].bg-surface-selected {
+	background: var(--yool-brand) !important;
+	box-shadow: none !important;
+}
+/* must out-rank the generic item :hover above, or white text lands on grey */
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"].bg-surface-selected:hover {
+	background: var(--yool-brand-hover) !important;
+}
+.bg-surface-menu-bar .bg-surface-selected span.truncate {
+	color: #fff !important;
+	font-weight: 600 !important;
+}
+.bg-surface-menu-bar .bg-surface-selected > span.shrink-0 {
+	color: #fff !important;
+}
+
+/* ---------- Section labels + dividers ---------- */
+.bg-surface-menu-bar div.cursor-pointer[class*="text-ink-gray-5"][class*="px-2"] {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--yool-muted);
+}
+.bg-surface-menu-bar[style*="224px"] div.cursor-pointer[class*="text-ink-gray-5"][class*="px-2"] {
+	margin: 4px 12px 2px !important;
+	padding: 0 12px !important;
+}
+.bg-surface-menu-bar div[class*="my-2.5"] {
+	border-top: 1px solid #ededee;
+}
+.bg-surface-menu-bar[style*="224px"] div[class*="my-2.5"] {
+	margin: 12px 24px !important;
+}
+
+/* Getting started card (bottom) */
+.bg-surface-menu-bar > div > .px-2 > .bg-surface-modal.rounded-lg {
+	border: 1px solid var(--yool-border);
+	border-radius: 4px !important;
+	box-shadow: none !important;
+	background: #fafafa !important;
+}
+.bg-surface-menu-bar > div > .px-2 > .bg-surface-modal.rounded-lg > button {
+	background: #e8f7f1 !important;
+	color: #0f8a63 !important;
+	border-radius: 4px !important;
+	font-weight: 600;
+}
+.bg-surface-menu-bar > div > .px-2 > .bg-surface-modal.rounded-lg > button:hover {
+	background: #d2f0e4 !important;
+}
+.bg-surface-menu-bar[style*="224px"] > div > .px-2 > .bg-surface-modal.rounded-lg {
+	margin: 0 4px;
+}
+
+/* ---------- Home page only (html.yool-fig-home, toggled by helpdesk_theme.js) ---------- */
+.yool-fig-home #app .h-screen > .flex-1 {
+	background: #fafafa;
+	font-family: var(--yool-font);
+}
+.yool-fig-home #app .h-screen > .flex-1 > div:first-child {
+	background: #fff;
+	border-color: var(--yool-border) !important;
+}
+.yool-fig-home .h-screen .flex-1 [class*="text-xl"][class*="font-semibold"] {
+	font-weight: 800;
+	color: var(--yool-text-strong);
+	font-size: 21px;
+}
+.yool-fig-home section.vgl-item [class*="border-outline-gray-1"] {
+	background: #fff;
+	border: 1px solid var(--yool-border) !important;
+	border-radius: 4px !important;
+}
+.yool-fig-home section.vgl-item [class*="text-ink-gray-5"][class*="text-base"] {
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--yool-muted);
+}
+.yool-fig-home section.vgl-item [class*="text-2xl"] {
+	font-size: 28px;
+	font-weight: 800;
+	color: var(--yool-text-strong);
+}
+.yool-fig-home section.vgl-item [class*="text-lg"] {
+	font-weight: 700;
+	color: var(--yool-text-strong);
+}
+.yool-fig-home section.vgl-item svg path[stroke="#5597F3"],
+.yool-fig-home section.vgl-item svg path[stroke="#F35555"],
+.yool-fig-home section.vgl-item svg path[stroke="#7263E8"],
+.yool-fig-home section.vgl-item svg path[stroke="#171717"] {
+	stroke: var(--yool-brand) !important;
+}
+/* Average Time Metrics bars: first-response series -> brand green */
+.yool-fig-home section.vgl-item svg path[fill="#171717"] {
+	fill: var(--yool-brand) !important;
+}
+.yool-fig-home section.vgl-item .size-2.rounded-full.bg-surface-gray-7 {
+	background: var(--yool-brand) !important;
+}
+
+/* ---------- Figma icons via CSS mask ----------
+ * Each nav item is matched either by the stock Lucide path (no JS needed), by the Figma path the
+ * HD Form Script overlay may have swapped in, or by data-yool-label (set by helpdesk_theme.js, needed
+ * for Public Views whose icon is an emoji). The stock glyph is hidden and the Figma glyph is drawn
+ * as a currentColor mask, so hover/active colours follow the text colour. */
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"] > span.shrink-0 {
+	position: relative;
+}
+
+/* <yool:icons> generated by tools/build_icons.py - do not edit by hand */
+:root {
+	--yi-analytics: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-744 -192)'%3E%3Cpath d='M759 212.5H763.5C763.898 212.5 764.279 212.342 764.561 212.061C764.842 211.779 765 211.398 765 211V197C765 196.602 764.842 196.221 764.561 195.939C764.279 195.658 763.898 195.5 763.5 195.5H760.5C760.102 195.5 759.721 195.658 759.439 195.939C759.158 196.221 759 196.602 759 197V212.5ZM759 212.5H753M753 212.5V202.5C753 202.102 753.158 201.721 753.439 201.439C753.721 201.158 754.102 201 754.5 201H759M753 212.5V207H748.5C748.102 207 747.721 207.158 747.439 207.439C747.158 207.721 747 208.102 747 208.5V211C747 211.398 747.158 211.779 747.439 212.061C747.721 212.342 748.102 212.5 748.5 212.5H753Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-bag: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-696 -336)'%3E%3Cpath d='M699 343.5H717M712 347C712 348.061 711.579 349.078 710.828 349.828C710.078 350.579 709.061 351 708 351C706.939 351 705.922 350.579 705.172 349.828C704.421 349.078 704 348.061 704 347M700 340H716C716.265 340 716.52 340.105 716.707 340.293C716.895 340.48 717 340.735 717 341V355C717 355.53 716.789 356.039 716.414 356.414C716.039 356.789 715.53 357 715 357H701C700.47 357 699.961 356.789 699.586 356.414C699.211 356.039 699 355.53 699 355V341C699 340.735 699.105 340.48 699.293 340.293C699.48 340.105 699.735 340 700 340Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-bell: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-936 -336)'%3E%3Cpath d='M946.5 357H949.5M941.994 349V345C941.994 341.686 944.683 339 948 339C948.788 339 949.569 339.154 950.297 339.456C951.026 339.757 951.688 340.199 952.246 340.756C952.803 341.313 953.246 341.975 953.548 342.703C953.85 343.431 954.006 344.212 954.006 345V349C954.006 349.986 954.454 350.919 955.223 351.537L955.532 351.785C956.449 352.521 955.928 354 954.752 354H941.248C940.072 354 939.551 352.521 940.468 351.785L940.777 351.537C941.157 351.232 941.463 350.846 941.674 350.407C941.885 349.968 941.994 349.487 941.994 349Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-chat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-840 -192)'%3E%3Cpath d='M855 200.5H849M852 204.5H849M846 195H858C858.796 195 859.559 195.316 860.121 195.879C860.684 196.441 861 197.204 861 198V207C861 207.796 860.684 208.559 860.121 209.121C859.559 209.684 858.796 210 858 210H847.5L843.808 212.893C843.734 212.951 843.646 212.987 843.552 212.996C843.459 213.006 843.365 212.99 843.281 212.949C843.197 212.907 843.126 212.844 843.076 212.764C843.026 212.685 843 212.593 843 212.499V198C843 197.204 843.316 196.441 843.879 195.879C844.441 195.316 845.204 195 846 195Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-doc_text: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-744 -336)'%3E%3Cpath d='M764 344.5H760.5C759.97 344.5 759.461 344.289 759.086 343.914C758.711 343.539 758.5 343.03 758.5 342.5V339M760 352.5H752M752 349H760M763.121 342.121L760.88 339.88C760.601 339.601 760.27 339.38 759.906 339.229C759.542 339.078 759.151 339 758.757 339H751C750.204 339 749.441 339.316 748.879 339.879C748.316 340.441 748 341.204 748 342V354C748 354.796 748.316 355.559 748.879 356.121C749.441 356.684 750.204 357 751 357H761C761.796 357 762.559 356.684 763.121 356.121C763.684 355.559 764 354.796 764 354V344.243C764 343.849 763.922 343.459 763.772 343.095C763.621 342.73 763.4 342.4 763.121 342.121Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-docs_album: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-696 -192)'%3E%3Cpath d='M703 200H701.5C700.837 200 700.201 200.263 699.732 200.732C699.263 201.201 699 201.837 699 202.5V210.5C699 211.163 699.263 211.799 699.732 212.268C700.201 212.737 700.837 213 701.5 213H711.5C712.163 213 712.799 212.737 713.268 212.268C713.737 211.799 714 211.163 714 210.5V208M717.268 197.268L715.732 195.732C715.5 195.5 715.224 195.316 714.921 195.19C714.617 195.065 714.292 195 713.964 195H705.5C704.837 195 704.201 195.263 703.732 195.732C703.263 196.201 703 196.837 703 197.5V205.5C703 206.163 703.263 206.799 703.732 207.268C704.201 207.737 704.837 208 705.5 208H715.5C716.163 208 716.799 207.737 717.268 207.268C717.737 206.799 718 206.163 718 205.5V199.036C718 198.708 717.935 198.383 717.81 198.079C717.684 197.776 717.5 197.5 717.268 197.268Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-1032 -336)'%3E%3Cpath d='M1052 351.55H1047M1047 355.45H1052M1040 346H1037C1036.47 346 1035.96 345.789 1035.59 345.414C1035.21 345.039 1035 344.53 1035 344V341C1035 340.47 1035.21 339.961 1035.59 339.586C1035.96 339.211 1036.47 339 1037 339H1040C1040.53 339 1041.04 339.211 1041.41 339.586C1041.79 339.961 1042 340.47 1042 341V344C1042 344.53 1041.79 345.039 1041.41 345.414C1041.04 345.789 1040.53 346 1040 346ZM1051 346H1048C1047.47 346 1046.96 345.789 1046.59 345.414C1046.21 345.039 1046 344.53 1046 344V341C1046 340.47 1046.21 339.961 1046.59 339.586C1046.96 339.211 1047.47 339 1048 339H1051C1051.53 339 1052.04 339.211 1052.41 339.586C1052.79 339.961 1053 340.47 1053 341V344C1053 344.53 1052.79 345.039 1052.41 345.414C1052.04 345.789 1051.53 346 1051 346ZM1040 357H1037C1036.47 357 1035.96 356.789 1035.59 356.414C1035.21 356.039 1035 355.53 1035 355V352C1035 351.47 1035.21 350.961 1035.59 350.586C1035.96 350.211 1036.47 350 1037 350H1040C1040.53 350 1041.04 350.211 1041.41 350.586C1041.79 350.961 1042 351.47 1042 352V355C1042 355.53 1041.79 356.039 1041.41 356.414C1041.04 356.789 1040.53 357 1040 357Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-invoice_check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-1368 -192)'%3E%3Cpath d='M1377.01 206.5H1383.01M1378.5 202.3L1379.7 203.5L1381.7 201.5M1387.45 212.396L1386.46 212.894C1386.32 212.963 1386.17 213 1386.01 213C1385.86 213 1385.71 212.965 1385.57 212.896L1383.99 212.119L1382.45 212.893C1382.32 212.963 1382.16 212.999 1382.01 212.999C1381.85 212.999 1381.7 212.963 1381.56 212.894L1380 212.118L1378.44 212.894C1378.3 212.963 1378.15 212.999 1377.99 212.999C1377.84 212.999 1377.69 212.963 1377.55 212.893L1376.01 212.119L1374.43 212.896C1374.29 212.965 1374.14 213 1373.99 213C1373.83 213 1373.68 212.963 1373.54 212.894L1372.55 212.396C1372.39 212.313 1372.25 212.185 1372.15 212.027C1372.05 211.869 1372 211.687 1372 211.502V196.498C1372 196.313 1372.05 196.131 1372.15 195.973C1372.25 195.815 1372.39 195.687 1372.55 195.604L1373.54 195.106C1373.68 195.037 1373.83 195 1373.99 195C1374.14 195 1374.29 195.035 1374.43 195.104L1376.01 195.881L1377.55 195.107C1377.68 195.037 1377.84 195.001 1377.99 195.001C1378.15 195.001 1378.3 195.037 1378.44 195.106L1380 195.882L1381.56 195.106C1381.7 195.037 1381.85 195.001 1382.01 195.001C1382.16 195.001 1382.31 195.037 1382.45 195.107L1383.99 195.881L1385.57 195.104C1385.71 195.035 1385.86 195 1386.01 195C1386.17 195 1386.32 195.037 1386.46 195.106L1387.45 195.604C1387.61 195.687 1387.75 195.815 1387.85 195.973C1387.95 196.131 1388 196.313 1388 196.498V211.503C1388 211.688 1387.95 211.87 1387.85 212.028C1387.75 212.185 1387.61 212.313 1387.45 212.396Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-phone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-1176 -264)'%3E%3Cpath d='M1194.7 282.963L1195.56 282.104C1195.84 281.823 1196 281.441 1196 281.043C1196 280.646 1195.84 280.264 1195.56 279.983L1193.64 278.065C1193.27 277.69 1192.76 277.479 1192.23 277.479C1191.7 277.479 1191.19 277.69 1190.82 278.065L1189.31 279.568C1188.2 279.152 1187.18 278.501 1186.34 277.659C1185.5 276.817 1184.85 275.804 1184.43 274.688L1185.94 273.185C1186.31 272.81 1186.52 272.301 1186.52 271.771C1186.52 271.241 1186.31 270.732 1185.94 270.357L1184.02 268.439C1183.74 268.158 1183.35 268 1182.96 268C1182.56 268 1182.18 268.158 1181.9 268.439L1181.04 269.298C1180.37 269.961 1180 270.861 1180 271.799C1180 273.402 1180.31 274.989 1180.93 276.47C1181.54 277.95 1182.44 279.296 1183.57 280.429C1184.7 281.563 1186.05 282.461 1187.53 283.074C1189.01 283.687 1190.6 284.001 1192.2 284C1193.14 283.999 1194.04 283.626 1194.7 282.963Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-1128 -192)'%3E%3Cpath d='M1148 212L1144.05 208.05M1146.12 203.059C1146.12 206.958 1142.96 210.118 1139.06 210.118C1135.16 210.118 1132 206.958 1132 203.059C1132 199.16 1135.16 196 1139.06 196C1142.96 196 1146.12 199.16 1146.12 203.059Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+	--yi-users: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24' fill='none'%3E%3Cg transform='translate(-1080 -120)'%3E%3Cpath d='M1096 140V139C1096 137.939 1095.58 136.922 1094.83 136.172C1094.08 135.421 1093.06 135 1092 135H1086C1084.94 135 1083.92 135.421 1083.17 136.172C1082.42 136.922 1082 137.939 1082 139V140M1102 140V139C1102 137.939 1101.58 136.922 1100.83 136.172C1100.08 135.421 1099.06 135 1098 135M1095 123C1096.06 123 1097.08 123.421 1097.83 124.172C1098.58 124.922 1099 125.939 1099 127C1099 128.061 1098.58 129.078 1097.83 129.828C1097.08 130.579 1096.06 131 1095 131M1093 127C1093 129.209 1091.21 131 1089 131C1086.79 131 1085 129.209 1085 127C1085 124.791 1086.79 123 1089 123C1091.21 123 1093 124.791 1093 127Z' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' /%3E%3C/g%3E%3C/svg%3E");
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Search"], :has(> span.shrink-0 svg path[d^="m21 21-4.34"]), :has(> span.shrink-0 svg path[d^="M16.6667 16.6667L13.375"])) > span.shrink-0 {
+	--yi: var(--yi-search);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Notifications"], :has(> span.shrink-0 svg path[d^="M10.268 21a2"])) > span.shrink-0 {
+	--yi: var(--yi-bell);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Home"], :has(> span.shrink-0 svg path[d^="M15 21v-8a1"]), :has(> span.shrink-0 svg path[d^="M16.6667 12.9583H12.5"])) > span.shrink-0 {
+	--yi: var(--yi-grid);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Dashboard"], :has(> span.shrink-0 svg rect[width="7"][height="9"][x="3"][y="3"]), :has(> span.shrink-0 svg path[d^="M12.5 17.0833H16.25"])) > span.shrink-0 {
+	--yi: var(--yi-analytics);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Tickets"], :has(> span.shrink-0 svg path[d^="M2 9a3 3 0 0 1 0 6v2"]), :has(> span.shrink-0 svg path[d^="M12.5 7.08333H7.5"])) > span.shrink-0 {
+	--yi: var(--yi-chat);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Knowledge Base"], :has(> span.shrink-0 svg path[d="M12 7v14"]), :has(> span.shrink-0 svg path[d^="M2 3h6a4 4 0 0 1 4 4v14"]), :has(> span.shrink-0 svg path[d^="M16.6667 7.08333H13.75"])) > span.shrink-0 {
+	--yi: var(--yi-doc_text);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Customers"], :has(> span.shrink-0 svg path[d^="M4.83144 1.7793"]), :has(> span.shrink-0 svg path[d^="M2.5 6.25H17.5"])) > span.shrink-0 {
+	--yi: var(--yi-bag);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Contacts"], :has(> span.shrink-0 svg path[d^="M17.915 22a6 6 0 0 0-12 0"]), :has(> span.shrink-0 svg path[d^="M13.3333 16.6667V15.8333"])) > span.shrink-0 {
+	--yi: var(--yi-users);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Agent Report"], :has(> span.shrink-0 svg path[d^="M7.50583 12.0833H12.5058"])) > span.shrink-0 {
+	--yi: var(--yi-invoice_check);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Kanban"], :has(> span.shrink-0 svg path[d^="M5.83333 6.66667H4.58333"])) > span.shrink-0 {
+	--yi: var(--yi-docs_album);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Call Logs"]) > span.shrink-0 {
+	--yi: var(--yi-phone);
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Search"], :has(> span.shrink-0 svg path[d^="m21 21-4.34"]), :has(> span.shrink-0 svg path[d^="M16.6667 16.6667L13.375"]), [data-yool-label="Notifications"], :has(> span.shrink-0 svg path[d^="M10.268 21a2"]), [data-yool-label="Home"], :has(> span.shrink-0 svg path[d^="M15 21v-8a1"]), :has(> span.shrink-0 svg path[d^="M16.6667 12.9583H12.5"]), [data-yool-label="Dashboard"], :has(> span.shrink-0 svg rect[width="7"][height="9"][x="3"][y="3"]), :has(> span.shrink-0 svg path[d^="M12.5 17.0833H16.25"]), [data-yool-label="Tickets"], :has(> span.shrink-0 svg path[d^="M2 9a3 3 0 0 1 0 6v2"]), :has(> span.shrink-0 svg path[d^="M12.5 7.08333H7.5"]), [data-yool-label="Knowledge Base"], :has(> span.shrink-0 svg path[d="M12 7v14"]), :has(> span.shrink-0 svg path[d^="M2 3h6a4 4 0 0 1 4 4v14"]), :has(> span.shrink-0 svg path[d^="M16.6667 7.08333H13.75"]), [data-yool-label="Customers"], :has(> span.shrink-0 svg path[d^="M4.83144 1.7793"]), :has(> span.shrink-0 svg path[d^="M2.5 6.25H17.5"]), [data-yool-label="Contacts"], :has(> span.shrink-0 svg path[d^="M17.915 22a6 6 0 0 0-12 0"]), :has(> span.shrink-0 svg path[d^="M13.3333 16.6667V15.8333"]), [data-yool-label="Agent Report"], :has(> span.shrink-0 svg path[d^="M7.50583 12.0833H12.5058"]), [data-yool-label="Kanban"], :has(> span.shrink-0 svg path[d^="M5.83333 6.66667H4.58333"]), [data-yool-label="Call Logs"]) > span.shrink-0 > svg {
+	display: none !important;
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Search"], :has(> span.shrink-0 svg path[d^="m21 21-4.34"]), :has(> span.shrink-0 svg path[d^="M16.6667 16.6667L13.375"]), [data-yool-label="Notifications"], :has(> span.shrink-0 svg path[d^="M10.268 21a2"]), [data-yool-label="Home"], :has(> span.shrink-0 svg path[d^="M15 21v-8a1"]), :has(> span.shrink-0 svg path[d^="M16.6667 12.9583H12.5"]), [data-yool-label="Dashboard"], :has(> span.shrink-0 svg rect[width="7"][height="9"][x="3"][y="3"]), :has(> span.shrink-0 svg path[d^="M12.5 17.0833H16.25"]), [data-yool-label="Tickets"], :has(> span.shrink-0 svg path[d^="M2 9a3 3 0 0 1 0 6v2"]), :has(> span.shrink-0 svg path[d^="M12.5 7.08333H7.5"]), [data-yool-label="Knowledge Base"], :has(> span.shrink-0 svg path[d="M12 7v14"]), :has(> span.shrink-0 svg path[d^="M2 3h6a4 4 0 0 1 4 4v14"]), :has(> span.shrink-0 svg path[d^="M16.6667 7.08333H13.75"]), [data-yool-label="Customers"], :has(> span.shrink-0 svg path[d^="M4.83144 1.7793"]), :has(> span.shrink-0 svg path[d^="M2.5 6.25H17.5"]), [data-yool-label="Contacts"], :has(> span.shrink-0 svg path[d^="M17.915 22a6 6 0 0 0-12 0"]), :has(> span.shrink-0 svg path[d^="M13.3333 16.6667V15.8333"]), [data-yool-label="Agent Report"], :has(> span.shrink-0 svg path[d^="M7.50583 12.0833H12.5058"]), [data-yool-label="Kanban"], :has(> span.shrink-0 svg path[d^="M5.83333 6.66667H4.58333"]), [data-yool-label="Call Logs"]) > span.shrink-0 {
+	font-size: 0 !important;
+}
+.bg-surface-menu-bar div.cursor-pointer[class*="h-7"]:is([data-yool-label="Search"], :has(> span.shrink-0 svg path[d^="m21 21-4.34"]), :has(> span.shrink-0 svg path[d^="M16.6667 16.6667L13.375"]), [data-yool-label="Notifications"], :has(> span.shrink-0 svg path[d^="M10.268 21a2"]), [data-yool-label="Home"], :has(> span.shrink-0 svg path[d^="M15 21v-8a1"]), :has(> span.shrink-0 svg path[d^="M16.6667 12.9583H12.5"]), [data-yool-label="Dashboard"], :has(> span.shrink-0 svg rect[width="7"][height="9"][x="3"][y="3"]), :has(> span.shrink-0 svg path[d^="M12.5 17.0833H16.25"]), [data-yool-label="Tickets"], :has(> span.shrink-0 svg path[d^="M2 9a3 3 0 0 1 0 6v2"]), :has(> span.shrink-0 svg path[d^="M12.5 7.08333H7.5"]), [data-yool-label="Knowledge Base"], :has(> span.shrink-0 svg path[d="M12 7v14"]), :has(> span.shrink-0 svg path[d^="M2 3h6a4 4 0 0 1 4 4v14"]), :has(> span.shrink-0 svg path[d^="M16.6667 7.08333H13.75"]), [data-yool-label="Customers"], :has(> span.shrink-0 svg path[d^="M4.83144 1.7793"]), :has(> span.shrink-0 svg path[d^="M2.5 6.25H17.5"]), [data-yool-label="Contacts"], :has(> span.shrink-0 svg path[d^="M17.915 22a6 6 0 0 0-12 0"]), :has(> span.shrink-0 svg path[d^="M13.3333 16.6667V15.8333"]), [data-yool-label="Agent Report"], :has(> span.shrink-0 svg path[d^="M7.50583 12.0833H12.5058"]), [data-yool-label="Kanban"], :has(> span.shrink-0 svg path[d^="M5.83333 6.66667H4.58333"]), [data-yool-label="Call Logs"]) > span.shrink-0::before {
+	content: "";
+	width: 20px;
+	height: 20px;
+	background: currentColor;
+	-webkit-mask: var(--yi) center / 20px 20px no-repeat;
+	mask: var(--yi) center / 20px 20px no-repeat;
+	position: absolute;
+	inset: 0;
+	margin: auto;
+}
+/* </yool:icons> */

@@ -1,0 +1,42 @@
+[
+ {
+  "columns": "[]",
+  "docstatus": 0,
+  "doctype": "HD View",
+  "dt": "HD Ticket",
+  "filters": "{}",
+  "icon": "📊",
+  "is_customer_portal": 0,
+  "is_default": 0,
+  "is_standard": 0,
+  "label": "Agent Report",
+  "load_default_columns": 0,
+  "name": "VIEW-HD Ticket-1237",
+  "order_by": "\"\"",
+  "pinned": 0,
+  "public": 1,
+  "route_name": "TicketAgentNew",
+  "rows": "[]",
+  "type": "list"
+ },
+ {
+  "columns": "[]",
+  "docstatus": 0,
+  "doctype": "HD View",
+  "dt": "HD Ticket",
+  "filters": "{}",
+  "icon": "🗂️",
+  "is_customer_portal": 0,
+  "is_default": 0,
+  "is_standard": 0,
+  "label": "Kanban",
+  "load_default_columns": 0,
+  "name": "VIEW-HD Ticket-1239",
+  "order_by": "\"\"",
+  "pinned": 0,
+  "public": 1,
+  "route_name": "TicketAgentNew",
+  "rows": "[]",
+  "type": "list"
+ }
+]

@@ -1,0 +1,107 @@
+# Server Script — "Chatwoot Message Templates"
+# Script Type: API | API Method: chatwoot_message_templates | Allow Guest: No
+#
+# The customer WhatsApp texts sent when a Chatwoot ticket moves to another status (Kanban column).
+#   action=get   (any agent)                -> default template + one row per status
+#   action=save  (Agent Manager / System Manager), payload {default_template?, rows: [{status, enabled, message}]}
+#   action=pause (Agent Manager / System Manager), payload {paused: 1|0} -> stops / allows every automatic WhatsApp
+#                (customers and agents; private notes still go). Each change leaves a Chatwoot Sync Log row.
+#   action=team_numbers (Agent Manager / System Manager), payload {tech_phone, sales_phone} -> saves the Sales-alert team
+#                numbers (Chatwoot Settings sales_alert_tech_phone / sales_alert_sales_phone; normalized/validated by the
+#                Before Save Server Script "Chatwoot Settings Team Numbers"). The numbers are returned to managers only.
+#                Optional payload.sales_inbox_id -> Chatwoot Settings.sales_alert_inbox_id (the Chatwoot inbox = WhatsApp
+#                number the Sales alert is sent FROM; empty/0 = default inbox).
+#   payload.with_inboxes=1 (managers, any action) -> also returns the Chatwoot inbox list (one test_connection call
+#                through the "Chatwoot API" door = one Chatwoot Sync Log row). Use POST so that row is kept.
+# Rows live in Chatwoot Settings.status_messages; a status without a row (or with an empty message) uses the
+# default template; a row with enabled=0 means "send nothing for this status".
+
+PLACEHOLDERS = ["{name}", "{ticket}", "{subject}", "{status}"]
+
+user = frappe.session.user
+roles = frappe.get_all("Has Role", filters={"parent": user, "parenttype": "User",
+	"role": ["in", ["System Manager", "Agent Manager", "Agent"]]}, pluck="role")
+is_admin = user == "Administrator" or "System Manager" in roles
+can_edit = is_admin or "Agent Manager" in roles
+if not (can_edit or "Agent" in roles):
+	frappe.throw("Not permitted", frappe.PermissionError)
+
+args = frappe.form_dict
+action = args.get("action") or "get"
+payload = args.get("payload") or {}
+if isinstance(payload, str):
+	payload = json.loads(payload) if payload.strip() else {}
+
+s = frappe.get_doc("Chatwoot Settings")
+
+if action == "save":
+	if not can_edit:
+		frappe.throw("Only Agent Managers can change customer messages.", frappe.PermissionError)
+	if "default_template" in payload:
+		text = str(payload.get("default_template") or "").strip()
+		if not text:
+			frappe.throw("The default message cannot be empty.")
+		s.customer_message_template = text[:1000]
+	valid = frappe.get_all("HD Ticket Status", pluck="name")
+	for r in payload.get("rows") or []:
+		status = str(r.get("status") or "")
+		if status not in valid:
+			frappe.throw("Unknown status: " + status)
+		row = None
+		for x in s.status_messages or []:
+			if x.status == status:
+				row = x
+		if row is None:
+			row = s.append("status_messages", {"status": status})
+		row.enabled = 1 if r.get("enabled") else 0
+		row.message = str(r.get("message") or "").strip()[:1000]
+	s.save(ignore_permissions=True)
+	s = frappe.get_doc("Chatwoot Settings")
+
+if action == "pause":
+	if not can_edit:
+		frappe.throw("Only Agent Managers can pause or resume WhatsApp messages.", frappe.PermissionError)
+	paused = 1 if payload.get("paused") else 0
+	if (1 if s.whatsapp_paused else 0) != paused:
+		s.whatsapp_paused = paused
+		s.save(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Chatwoot Sync Log", "direction": "Outbound", "status": "Success",
+			"event": "whatsapp_paused" if paused else "whatsapp_resumed",
+			"error": ("Paused" if paused else "Resumed") + " by " + frappe.get_fullname(user)}).insert(ignore_permissions=True)
+	s = frappe.get_doc("Chatwoot Settings")
+
+if action == "team_numbers":
+	if not can_edit:
+		frappe.throw("Only Agent Managers can change the team numbers.  /  Maamulayaasha keliya ayaa beddeli kara numbarrada kooxaha.", frappe.PermissionError)
+	old_numbers = [s.get("sales_alert_tech_phone") or "", s.get("sales_alert_sales_phone") or "", frappe.utils.cint(s.get("sales_alert_inbox_id"))]
+	s.sales_alert_tech_phone = str(payload.get("tech_phone") or "").strip()
+	s.sales_alert_sales_phone = str(payload.get("sales_phone") or "").strip()
+	if "sales_inbox_id" in payload:
+		box = str(payload.get("sales_inbox_id") or "").strip()
+		if box and not box.isdigit():
+			frappe.throw("Inbox-ka Sales: geli lambar inbox Chatwoot ah.  /  Sales inbox: enter a Chatwoot inbox id.")
+		s.sales_alert_inbox_id = int(box) if box else 0
+	s.save(ignore_permissions=True)
+	s = frappe.get_doc("Chatwoot Settings")
+	new_numbers = [s.get("sales_alert_tech_phone") or "", s.get("sales_alert_sales_phone") or "", frappe.utils.cint(s.get("sales_alert_inbox_id"))]
+	frappe.get_doc({"doctype": "Chatwoot Sync Log", "direction": "Outbound", "status": "Success", "event": "team_numbers",
+		"error": ("Team numbers saved (no change)" if old_numbers == new_numbers else "Team numbers changed") + " by " + frappe.get_fullname(user)}).insert(ignore_permissions=True)
+
+rows = []
+for x in s.status_messages or []:
+	rows.append({"status": x.status, "enabled": 1 if x.enabled else 0, "message": x.message or ""})
+frappe.flags.templates = {
+	"default_template": s.customer_message_template or "",
+	"send_customer_messages": 1 if s.send_customer_messages else 0,
+	"whatsapp_paused": 1 if s.whatsapp_paused else 0,
+	"enabled": 1 if s.enabled else 0,
+	"can_edit": 1 if can_edit else 0,
+	"placeholders": PLACEHOLDERS,
+	"rows": rows,
+}
+if can_edit:
+	frappe.flags.templates["team_numbers"] = {"tech_phone": s.get("sales_alert_tech_phone") or "", "sales_phone": s.get("sales_alert_sales_phone") or "",
+		"sales_inbox_id": frappe.utils.cint(s.get("sales_alert_inbox_id")) or None, "default_inbox_id": frappe.utils.cint(s.default_inbox_id) or None}
+	if payload.get("with_inboxes"):
+		got = (run_script("Chatwoot API", action="test_connection", internal_key=s.get_password("internal_key", raise_exception=False), payload={}) or {}).get("chatwoot_result") or {}
+		frappe.flags.templates["inboxes"] = got.get("inboxes") if got.get("ok") else None

@@ -1,0 +1,238 @@
+{
+ "search": {
+  "figma_name": "search-loupe 1",
+  "node_id": "1522:19745"
+ },
+ "bell": {
+  "figma_name": "Bell,-Notifications 1",
+  "node_id": "3697:14552"
+ },
+ "grid": {
+  "figma_name": "grid-layout-menu-more 1",
+  "node_id": "3725:98561"
+ },
+ "house": {
+  "figma_name": "Home",
+  "node_id": "4179:26457"
+ },
+ "analytics": {
+  "figma_name": "analytics-chart-right-big 1",
+  "node_id": "1522:19506"
+ },
+ "chat": {
+  "figma_name": "messages-chat-text 1",
+  "node_id": "1522:19511"
+ },
+ "doc_text": {
+  "figma_name": "document-file-text-two-lines-bottom 1",
+  "node_id": "3210:166129"
+ },
+ "bag": {
+  "figma_name": "bag-shopping-big 1",
+  "node_id": "3140:165996"
+ },
+ "users": {
+  "figma_name": "Users 1",
+  "node_id": "1249:20580"
+ },
+ "user": {
+  "figma_name": "user",
+  "node_id": "4179:26453"
+ },
+ "invoice_check": {
+  "figma_name": "invoice-checkmark-copy 1",
+  "node_id": "1590:16681"
+ },
+ "docs_album": {
+  "figma_name": "documents-files-album-right-top 1",
+  "node_id": "1522:19508"
+ },
+ "phone": {
+  "figma_name": "phone 1",
+  "node_id": "1784:6852"
+ },
+ "settings": {
+  "figma_name": "settings 1",
+  "node_id": "1522:19504"
+ },
+ "sliders": {
+  "figma_name": "settings-filter 1",
+  "node_id": "3701:15623"
+ },
+ "receipt": {
+  "figma_name": "receipt-currency-dollar-2 1",
+  "node_id": "3210:166202"
+ },
+ "invoice_text": {
+  "figma_name": "invoice-text 1",
+  "node_id": "3140:165997"
+ },
+ "store": {
+  "figma_name": "store-modern 1",
+  "node_id": "3140:166000"
+ },
+ "cart": {
+  "figma_name": "Shopping-Cart 1",
+  "node_id": "1622:5518"
+ },
+ "package": {
+  "figma_name": "Shopping-bag,-Package,-Pack 1",
+  "node_id": "1622:5566"
+ },
+ "mail": {
+  "figma_name": "letter-mail-3 1",
+  "node_id": "2630:63104"
+ },
+ "at": {
+  "figma_name": "@-email-mail 1",
+  "node_id": "2630:63092"
+ },
+ "calendar": {
+  "figma_name": "calendar-date 1",
+  "node_id": "977:17863"
+ },
+ "clock": {
+  "figma_name": "time-clock 1",
+  "node_id": "2671:43531"
+ },
+ "lock": {
+  "figma_name": "lock-line-big-3 1",
+  "node_id": "2630:63136"
+ },
+ "globe": {
+  "figma_name": "Earth, Home, World 1",
+  "node_id": "5372:12213"
+ },
+ "connect": {
+  "figma_name": "connect-arrows-circle 1",
+  "node_id": "5415:5264"
+ },
+ "link": {
+  "figma_name": "attachment-link 1",
+  "node_id": "636:4265"
+ },
+ "checklist": {
+  "figma_name": "check-list-checkmark-2 1",
+  "node_id": "1522:19507"
+ },
+ "building": {
+  "figma_name": "Hotel, Building 1",
+  "node_id": "5943:3976"
+ },
+ "server": {
+  "figma_name": "Server, Databases.6 1",
+  "node_id": "5837:14102"
+ },
+ "desktop": {
+  "figma_name": "desktop-computer-pc 1",
+  "node_id": "5790:23184"
+ },
+ "upload": {
+  "figma_name": "cloud-upload 1",
+  "node_id": "1046:17954"
+ },
+ "download": {
+  "figma_name": "download-arrow 1",
+  "node_id": "1590:16679"
+ },
+ "trash": {
+  "figma_name": "bin-trash-style-5-vertical-lines 1",
+  "node_id": "1030:16974"
+ },
+ "pen": {
+  "figma_name": "pen-edit-create 1",
+  "node_id": "1590:16680"
+ },
+ "list": {
+  "figma_name": "list-paragraph 1",
+  "node_id": "636:4262"
+ },
+ "heading": {
+  "figma_name": "text-h1 1",
+  "node_id": "636:4270"
+ },
+ "excel": {
+  "figma_name": "documents-file-excel 1",
+  "node_id": "1030:16972"
+ },
+ "report": {
+  "figma_name": "document-file-chart-analytics-bottom 1",
+  "node_id": "5860:15145"
+ },
+ "board": {
+  "figma_name": "menu-board-square 1",
+  "node_id": "1522:19726"
+ },
+ "browser": {
+  "figma_name": "browser-internet-web-text 1",
+  "node_id": "5943:12027"
+ },
+ "dollar": {
+  "figma_name": "Dollar 2",
+  "node_id": "4882:73375"
+ },
+ "wallet": {
+  "figma_name": "wallet",
+  "node_id": "4179:26451"
+ },
+ "headphones": {
+  "figma_name": "Headphones,-Customer,-support 1",
+  "node_id": "1522:19509"
+ },
+ "verified": {
+  "figma_name": "check-verified-02 1",
+  "node_id": "697:5191"
+ },
+ "suitcase": {
+  "figma_name": "suitcase-job-work-checkmark 1",
+  "node_id": "6909:85033"
+ },
+ "star": {
+  "figma_name": "Start icon",
+  "node_id": "538:1192"
+ },
+ "graduate": {
+  "figma_name": "person-graduate",
+  "node_id": "1622:5610"
+ },
+ "idea": {
+  "figma_name": "document-idea-light-lamp 1",
+  "node_id": "1539:187"
+ },
+ "health": {
+  "figma_name": "health-graph-heart 1",
+  "node_id": "1622:5605"
+ },
+ "chart_down": {
+  "figma_name": "Business,-Chart 2-Down",
+  "node_id": "1170:19130"
+ },
+ "arrow_up": {
+  "figma_name": "Arrow, Up",
+  "node_id": "1170:19080"
+ },
+ "arrows": {
+  "figma_name": "Arrows, change",
+  "node_id": "3140:165137"
+ },
+ "transfer": {
+  "figma_name": "Transfer",
+  "node_id": "4179:26449"
+ },
+ "warning": {
+  "figma_name": "warning",
+  "node_id": "5285:18664"
+ },
+ "notes": {
+  "figma_name": "Documents,-Notes,-Pages 1",
+  "node_id": "1622:5549"
+ },
+ "pin": {
+  "figma_name": "Pin, Location 1",
+  "node_id": "6746:66504"
+ },
+ "percent": {
+  "figma_name": "Sale,-Discount,-Promotion 2",
+  "node_id": "3210:166180"
+ }
+}

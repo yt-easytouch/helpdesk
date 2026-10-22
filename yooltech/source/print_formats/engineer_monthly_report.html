@@ -1,0 +1,156 @@
+<style>
+/* Page setup. The plain ".print-format" rule is read by Frappe's PDF generator as wkhtmltopdf options
+   (A4 portrait, margins = docx: top 1440tw, left/right 1134tw, bottom 1127tw). @page is for Chrome PDF. */
+.print-format { margin-top: 25.4mm; margin-bottom: 19.9mm; margin-left: 20mm; margin-right: 20mm; page-size: A4; orientation: Portrait; }
+@page { size: A4 portrait; margin: 25.4mm 20mm 19.9mm 20mm; }
+@media print { .print-format { margin: 0 !important; padding: 0 !important; } }
+
+.print-format .emr { font-family: "Lato Light", "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 300; font-size: 10pt; color: #0D0D0D; line-height: 1.25; }
+.print-format .emr * { box-sizing: border-box; }
+.print-format .emr .emr-top { height: 14mm; }
+.print-format .emr table.emr-head { width: 100%; border-collapse: collapse; margin: 0; }
+.print-format .emr table.emr-head td { border: none !important; padding: 0 !important; vertical-align: top !important; }
+.print-format .emr .emr-title { font-family: "Montserrat Light", "Montserrat", "Lato Light", "Lato", Arial, sans-serif; font-weight: 300; font-size: 18pt; line-height: 1.2; color: #00AB9A; text-transform: none; margin: 0; }
+.print-format .emr .emr-logo { width: 40.3mm; height: 11.3mm; margin-top: 1mm; }
+.print-format .emr .emr-date { text-align: right; font-size: 11pt; margin: 15pt 0 0 0; }
+.print-format .emr .emr-name { text-align: right; font-size: 11pt; font-weight: 700; margin: 0; }
+.print-format .emr .emr-h { font-size: 11pt; font-weight: 700; color: #00AB9A; margin: 15pt 0 10pt 0; padding: 0; page-break-after: avoid; }
+.print-format .emr .emr-h .n { display: inline-block; width: 5mm; color: #00AB9A; }
+
+.print-format .emr table.emr-t { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; border-top: 0.5pt solid #000; border-bottom: 0.5pt solid #000; }
+.print-format .emr table.emr-t th,
+.print-format .emr table.emr-t td { border: none !important; border-top: 0.5pt solid #000 !important; padding: 6pt 4pt 6pt 1.5pt !important; font-size: 10pt; text-align: left; vertical-align: middle !important; word-wrap: break-word; overflow-wrap: break-word; }
+.print-format .emr table.emr-t th { font-weight: 700; color: #0D0D0D; background: transparent; }
+.print-format .emr table.emr-t td { color: #7F7F7F; white-space: pre-wrap; }
+.print-format .emr table.emr-act td { padding-top: 3pt !important; padding-bottom: 3pt !important; vertical-align: top !important; }
+.print-format .emr table.emr-t thead { display: table-header-group; }
+.print-format .emr table.emr-t tr { page-break-inside: avoid; }
+.print-format .emr .emr-missing { font-size: 9pt; color: #7F7F7F; margin: 6pt 0 0 0; }
+
+/* signature / comment boxes: only the lines the docx shows */
+.print-format .emr table.emr-box { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; border-bottom: 0.5pt solid #000; }
+.print-format .emr table.emr-box td { border: none !important; padding: 6pt 4pt 6pt 1.5pt !important; font-size: 10pt; vertical-align: top !important; }
+.print-format .emr table.emr-box td.lbl { font-weight: 700; color: #0D0D0D; }
+.print-format .emr table.emr-box td.blank { height: 22pt; }
+.print-format .emr table.emr-box td.cmt { color: #0D0D0D; white-space: pre-wrap; height: 66pt; border-bottom: 0.5pt solid #000 !important; }
+.print-format .emr .emr-gap { height: 12pt; }
+
+.print-format .emr .emr-instr { background: #EDFAF7; padding: 6pt 14pt 10pt 14pt; page-break-inside: avoid; }
+.print-format .emr .emr-instr .ih { font-size: 9pt; color: #00AB9A; margin: 6pt 0 3pt 0; }
+.print-format .emr .emr-instr ul { margin: 0; padding-left: 14pt; }
+.print-format .emr .emr-instr li { font-size: 9pt; color: #0D0D0D; margin: 6pt 0 3pt 0; }
+.print-format .emr .emr-instr li b { font-weight: 700; }
+</style>
+
+{%- macro d_slash(d) -%}{% if d %}{{ frappe.utils.formatdate(d, "dd/MM/yyyy") }}{% endif %}{%- endmacro -%}
+{%- macro num(v) -%}{% if v %}{{ "%g"|format(v|float) }}{% endif %}{%- endmacro -%}
+
+<div class="emr">
+  <div class="emr-top"></div>
+  <table class="emr-head">
+    <tr>
+      <td style="width:65%;"><div class="emr-title">MONTHLY REPORT FOR<br>TECHNICAL ENGINEERS</div></td>
+      <td style="width:35%; text-align:right;"><img class="emr-logo" src="/files/emr_yooltech_logo.png" alt="Yooltech"></td>
+    </tr>
+  </table>
+
+  <p class="emr-date">{% if doc.report_date %}{{ frappe.utils.formatdate(doc.report_date, "d.M.yyyy") }}{% endif %}</p>
+  <p class="emr-name">{{ (doc.engineer_name or "")|e }}</p>
+
+  <div class="emr-h"><span class="n">1-</span>Summary of Activities</div>
+  <table class="emr-t">
+    <thead><tr>
+      <th style="width:32.4%;">Number of Works Done</th>
+      <th style="width:22.5%;">New Clients</th>
+      <th style="width:22.55%;">Issue Resolved</th>
+      <th style="width:22.55%;">Clients Visited</th>
+    </tr></thead>
+    <tbody><tr>
+      <td>{{ doc.works_done or 0 }}</td>
+      <td>{{ doc.new_clients or 0 }}</td>
+      <td>{{ doc.issues_resolved or 0 }}</td>
+      <td>{{ doc.clients_visited or 0 }}</td>
+    </tr></tbody>
+  </table>
+
+  <div class="emr-h"><span class="n">2-</span>Detailed Activity Log</div>
+  <table class="emr-t emr-act">
+    <thead><tr>
+      <th style="width:5%;">#</th>
+      <th style="width:13%;">Date</th>
+      <th style="width:18%;">Client Name</th>
+      <th style="width:21%;">Issue</th>
+      <th style="width:12%;">Solved by</th>
+      <th style="width:9%;">Time</th>
+      <th style="width:11%;">Status</th>
+      <th style="width:11%;">Visit cost</th>
+    </tr></thead>
+    <tbody>
+    {%- for row in doc.activities %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ d_slash(row.activity_date) }}</td>
+        <td>{{ (row.client_name or "")|e }}</td>
+        <td>{{ (row.issue or "")|e }}</td>
+        <td>{{ (row.solved_by or "")|e }}</td>
+        <td>{{ (row.time_spent_text or "")|e }}</td>
+        <td>{{ (row.activity_status or "")|e }}</td>
+        <td>{{ num(row.visit_cost) }}</td>
+      </tr>
+    {%- endfor %}
+    </tbody>
+  </table>
+  <p class="emr-missing">Rows missing time: {{ doc.missing_time_count or 0 }}</p>
+
+  <div class="emr-h"><span class="n">3-</span>Challenges and Solutions</div>
+  <table class="emr-t">
+    <thead><tr><th style="width:50%;">Challenge</th><th style="width:50%;">Solution</th></tr></thead>
+    <tbody>
+    {%- for row in doc.challenges %}
+      <tr><td>{{ (row.challenge or "")|e }}</td><td>{{ (row.solution or "")|e }}</td></tr>
+    {%- endfor %}
+    </tbody>
+  </table>
+
+  <div class="emr-h"><span class="n">4-</span>Client Feedback</div>
+  <table class="emr-t">
+    <thead><tr><th style="width:32.4%;">Client Name</th><th style="width:67.6%;">Feedback</th></tr></thead>
+    <tbody>
+    {%- for row in doc.feedback %}
+      <tr><td>{{ (row.client_name or "")|e }}</td><td>{{ (row.feedback or "")|e }}</td></tr>
+    {%- endfor %}
+    </tbody>
+  </table>
+
+  <div class="emr-h"><span class="n">5-</span>Signature and Additional Comments</div>
+  <table class="emr-box">
+    <tr><td class="lbl" style="width:50%;">Technical Engineer&rsquo;s Signature</td><td class="lbl" style="width:50%;">Date</td></tr>
+    <tr><td class="blank"></td><td class="blank"></td></tr>
+  </table>
+
+  <div class="emr-gap"></div>
+  <table class="emr-box" style="page-break-inside: avoid;">
+    <tr><td class="lbl" colspan="2">Engineer&rsquo;s Comment</td></tr>
+    <tr><td class="cmt" colspan="2">{{ (doc.engineer_comment or "")|e }}</td></tr>
+  </table>
+
+  <div class="emr-gap"></div>
+  <table class="emr-box" style="page-break-inside: avoid;">
+    <tr><td class="lbl" colspan="2">Head of Technical Team&rsquo;s Comment</td></tr>
+    <tr><td class="cmt" colspan="2">{{ (doc.head_comment or "")|e }}</td></tr>
+    <tr><td class="lbl" style="width:50%;">Head of Technical Team&rsquo;s Signature</td><td class="lbl" style="width:50%;">Date</td></tr>
+    <tr><td class="blank"></td><td class="blank"></td></tr>
+  </table>
+
+  <div class="emr-gap"></div>
+  <div class="emr-instr">
+    <div class="ih">Instructions for Technical Enginee:</div>
+    <ul>
+      <li><b>Fill Out Daily:</b> Complete the detailed activity log daily to ensure accuracy and consistency.</li>
+      <li><b>Compile Monthly:</b> At the end of each month, compile your daily logs into a comprehensive monthly report.</li>
+      <li><b>Submit Monthly:</b> Submit the monthly report to your Team Lead by the last working day of the month, no later than 5 PM.</li>
+      <li><b>Be Detailed:</b> Provide as much detail as possible, especially in the sections for key achievements and challenges.</li>
+      <li><b>Seek Feedback:</b> Use Team Lead comments from previous months to improve your performance and report quality in the following months.</li>
+    </ul>
+  </div>
+</div>
