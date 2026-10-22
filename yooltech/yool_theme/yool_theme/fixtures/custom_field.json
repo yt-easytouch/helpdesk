@@ -302,6 +302,18 @@
   "unique": 0
  },
  {
+  "description": "Sales alert: Chatwoot inbox id the alert is sent FROM (the inbox of the Sales WhatsApp number). Empty/0 = Default inbox. Also editable in the Kanban: ⚙ Team numbers (Inbox-ka Sales).",
+  "doctype": "Custom Field",
+  "dt": "Chatwoot Settings",
+  "fieldname": "sales_alert_inbox_id",
+  "fieldtype": "Int",
+  "insert_after": "sales_alert_sales_phone",
+  "label": "Sales alert inbox (Chatwoot)",
+  "module": null,
+  "name": "Chatwoot Settings-sales_alert_inbox_id",
+  "options": null
+ },
+ {
   "description": "Sales alert: shown in the alert text so technicians can call Sales back. Optional.",
   "doctype": "Custom Field",
   "dt": "Chatwoot Settings",

@@ -20,7 +20,8 @@
 //   (HD Kanban Settings config). New Sales tickets start there ("HD Ticket Source Team"); Technical drags them on to
 //   Assigned / In Progress. Entering Sales sends no customer WhatsApp ("HD Ticket Chatwoot Sync").
 //   Managers: "⚙ Team numbers / Numbarrada kooxaha" (column ⋮ menu and the WhatsApp switch menu) edits the
-//   Sales-alert numbers in Chatwoot Settings through chatwoot_message_templates action=team_numbers.
+//   Sales-alert numbers in Chatwoot Settings through chatwoot_message_templates action=team_numbers, plus
+//   "Inbox-ka Sales (Chatwoot)" = sales_alert_inbox_id, the Chatwoot inbox (WhatsApp number) the alert is sent FROM.
 // - Sales defaults (2026-10-22): a member of HD Team "Sales" who is not in "Technical" gets the new-ticket form with
 //   Team = Sales and Column = SALES, both locked. Everyone else: picking Team Sales moves Column to SALES, picking
 //   another team moves it back to CUSUB. Test hooks (no save): __yoolKanban.newTicketDefaults(user),
@@ -2537,7 +2538,8 @@ function setupForm({ router }) {
 			if (!canEdit) return toast("Only managers can change the team numbers.", false);
 			let data;
 			try {
-				data = ((await api("chatwoot_message_templates", { action: "get" })) || {}).templates || {};
+				// POST + with_inboxes: the server lists the Chatwoot inboxes (one test_connection Sync Log row).
+				data = ((await api("chatwoot_message_templates", { action: "get", payload: { with_inboxes: 1 } }, true)) || {}).templates || {};
 			} catch (e) {
 				return toast("Could not load the team numbers: " + e.message, false);
 			}
@@ -2584,6 +2586,34 @@ function setupForm({ router }) {
 			tech.dataset.yoolTn = "tech";
 			const sales = input(nums.sales_phone, "+2526XXXXXXXX");
 			sales.dataset.yoolTn = "sales";
+			// Sales inbox: a select of the Chatwoot inboxes when the list loaded, else a plain number field.
+			const ctlStyle =
+				"height:40px;padding:8px 12px;box-sizing:border-box;border-radius:0;border:1px solid " + T.border + ";background:" + T.surface + ";" +
+				"color:" + T.text900 + ";font:500 14px/20px " + T.font + ";outline:none;width:100%;";
+			let inbox;
+			if (Array.isArray(data.inboxes) && data.inboxes.length) {
+				inbox = el("select", ctlStyle);
+				const add = (value, label) => {
+					const o = document.createElement("option");
+					o.value = value;
+					o.textContent = label;
+					inbox.append(o);
+				};
+				add("", "Default" + (nums.default_inbox_id ? " (inbox " + nums.default_inbox_id + ")" : ""));
+				data.inboxes.forEach((b) => add(String(b.id), "#" + b.id + " · " + (b.name || "") + (b.type ? " · " + String(b.type).replace("Channel::", "") : "")));
+				const cur = nums.sales_inbox_id ? String(nums.sales_inbox_id) : "";
+				if (cur && !data.inboxes.some((b) => String(b.id) === cur)) add(cur, "#" + cur + " (not found in Chatwoot)");
+				inbox.value = cur;
+			} else {
+				inbox = el("input", ctlStyle);
+				inbox.type = "number";
+				inbox.min = "1";
+				inbox.value = nums.sales_inbox_id ? String(nums.sales_inbox_id) : "";
+				inbox.placeholder = "Default" + (nums.default_inbox_id ? " (" + nums.default_inbox_id + ")" : "");
+			}
+			inbox.dataset.yoolTn = "inbox";
+			inbox.addEventListener("focus", () => (inbox.style.borderColor = T.brand));
+			inbox.addEventListener("blur", () => (inbox.style.borderColor = T.border));
 			const err = el("div", "display:none;font:500 13px/20px " + T.font + ";color:#b42318;");
 			const btns = el("div", "display:flex;justify-content:flex-end;gap:12px;margin-top:4px;");
 			const cancel = btnSecondary("Cancel");
@@ -2595,6 +2625,7 @@ function setupForm({ router }) {
 				intro,
 				fld("Numberka Kooxda Technical (WhatsApp)", "Wuxuu helaa digniinta Sales / Receives the Sales alert. Bannaan = digniin lama diro / Empty = no alert.", tech),
 				fld("Numberka Kooxda Sales", "Waxaa lagu qoraa fariinta / Shown in the alert text.", sales),
+				fld("Inbox-ka Sales (Chatwoot)", "Digniinta waxaa laga diraa inbox-kan (numberka WhatsApp ee Sales) / The alert is sent FROM this inbox. Default = inbox-ka caadiga.", inbox),
 				err,
 				btns
 			);
@@ -2625,10 +2656,18 @@ function setupForm({ router }) {
 				ok.textContent = "Saving…";
 				err.style.display = "none";
 				try {
-					const m = await api("chatwoot_message_templates", { action: "team_numbers", payload: { tech_phone: tech.value.trim(), sales_phone: sales.value.trim() } }, true);
+					const m = await api(
+						"chatwoot_message_templates",
+						{ action: "team_numbers", payload: { tech_phone: tech.value.trim(), sales_phone: sales.value.trim(), sales_inbox_id: String(inbox.value || "").trim() } },
+						true
+					);
 					const saved = ((m || {}).templates || {}).team_numbers || {};
 					close();
-					toast("Team numbers saved / Waa la keydiyay: Technical " + (saved.tech_phone || "—") + " · Sales " + (saved.sales_phone || "—"), true);
+					toast(
+						"Team numbers saved / Waa la keydiyay: Technical " + (saved.tech_phone || "—") + " · Sales " + (saved.sales_phone || "—") +
+							" · Inbox " + (saved.sales_inbox_id || "default"),
+						true
+					);
 				} catch (e) {
 					err.textContent = e.message;
 					err.style.display = "block";

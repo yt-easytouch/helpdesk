@@ -9,6 +9,10 @@
 #   action=team_numbers (Agent Manager / System Manager), payload {tech_phone, sales_phone} -> saves the Sales-alert team
 #                numbers (Chatwoot Settings sales_alert_tech_phone / sales_alert_sales_phone; normalized/validated by the
 #                Before Save Server Script "Chatwoot Settings Team Numbers"). The numbers are returned to managers only.
+#                Optional payload.sales_inbox_id -> Chatwoot Settings.sales_alert_inbox_id (the Chatwoot inbox = WhatsApp
+#                number the Sales alert is sent FROM; empty/0 = default inbox).
+#   payload.with_inboxes=1 (managers, any action) -> also returns the Chatwoot inbox list (one test_connection call
+#                through the "Chatwoot API" door = one Chatwoot Sync Log row). Use POST so that row is kept.
 # Rows live in Chatwoot Settings.status_messages; a status without a row (or with an empty message) uses the
 # default template; a row with enabled=0 means "send nothing for this status".
 
@@ -69,12 +73,17 @@ if action == "pause":
 if action == "team_numbers":
 	if not can_edit:
 		frappe.throw("Only Agent Managers can change the team numbers.  /  Maamulayaasha keliya ayaa beddeli kara numbarrada kooxaha.", frappe.PermissionError)
-	old_numbers = [s.get("sales_alert_tech_phone") or "", s.get("sales_alert_sales_phone") or ""]
+	old_numbers = [s.get("sales_alert_tech_phone") or "", s.get("sales_alert_sales_phone") or "", frappe.utils.cint(s.get("sales_alert_inbox_id"))]
 	s.sales_alert_tech_phone = str(payload.get("tech_phone") or "").strip()
 	s.sales_alert_sales_phone = str(payload.get("sales_phone") or "").strip()
+	if "sales_inbox_id" in payload:
+		box = str(payload.get("sales_inbox_id") or "").strip()
+		if box and not box.isdigit():
+			frappe.throw("Inbox-ka Sales: geli lambar inbox Chatwoot ah.  /  Sales inbox: enter a Chatwoot inbox id.")
+		s.sales_alert_inbox_id = int(box) if box else 0
 	s.save(ignore_permissions=True)
 	s = frappe.get_doc("Chatwoot Settings")
-	new_numbers = [s.get("sales_alert_tech_phone") or "", s.get("sales_alert_sales_phone") or ""]
+	new_numbers = [s.get("sales_alert_tech_phone") or "", s.get("sales_alert_sales_phone") or "", frappe.utils.cint(s.get("sales_alert_inbox_id"))]
 	frappe.get_doc({"doctype": "Chatwoot Sync Log", "direction": "Outbound", "status": "Success", "event": "team_numbers",
 		"error": ("Team numbers saved (no change)" if old_numbers == new_numbers else "Team numbers changed") + " by " + frappe.get_fullname(user)}).insert(ignore_permissions=True)
 
@@ -91,4 +100,8 @@ frappe.flags.templates = {
 	"rows": rows,
 }
 if can_edit:
-	frappe.flags.templates["team_numbers"] = {"tech_phone": s.get("sales_alert_tech_phone") or "", "sales_phone": s.get("sales_alert_sales_phone") or ""}
+	frappe.flags.templates["team_numbers"] = {"tech_phone": s.get("sales_alert_tech_phone") or "", "sales_phone": s.get("sales_alert_sales_phone") or "",
+		"sales_inbox_id": frappe.utils.cint(s.get("sales_alert_inbox_id")) or None, "default_inbox_id": frappe.utils.cint(s.default_inbox_id) or None}
+	if payload.get("with_inboxes"):
+		got = (run_script("Chatwoot API", action="test_connection", internal_key=s.get_password("internal_key", raise_exception=False), payload={}) or {}).get("chatwoot_result") or {}
+		frappe.flags.templates["inboxes"] = got.get("inboxes") if got.get("ok") else None

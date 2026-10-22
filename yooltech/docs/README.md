@@ -113,7 +113,13 @@ Sales. Team numbers: Chatwoot Settings `sales_alert_tech_phone` ("Numberka Kooxd
 receives the alert; empty = no alert + a Skipped Sync Log row) and `sales_alert_sales_phone` ("Numberka Kooxda
 Sales", shown in the alert), normalized by **Chatwoot Settings Team Numbers** (Before Save, same rule as caller
 phones). Managers edit them in the Kanban: column ⋮ menu or the WhatsApp switch menu → "⚙ Team numbers /
-Numbarrada kooxaha" (API `chatwoot_message_templates` action `team_numbers`).
+Numbarrada kooxaha" (API `chatwoot_message_templates` action `team_numbers`). **Sender inbox**: Chatwoot
+Settings `sales_alert_inbox_id` ("Sales alert inbox (Chatwoot)", Kanban "Inbox-ka Sales (Chatwoot)", a select of
+the Chatwoot inboxes) = the inbox of the Sales WhatsApp number the alert is sent FROM; empty = `default_inbox_id`.
+The Chatwoot API door's `send_agent_message` / `ensure_conversation` take an optional `inbox_id` and only reuse a
+conversation IN that inbox (a contact can have one per inbox); with `keep_open` an already-open conversation there
+(a live Sales ↔ Technical chat) is not resolved after the alert. Customer messages and assignment alerts stay on
+the default inbox.
 
 ### 9. Figma theme
 - HD Form Scripts **Helpdesk Figma Theme** (new-ticket page) and **Helpdesk Figma Theme Ticket** (ticket page),
@@ -160,7 +166,7 @@ Fixtures keep their record names (e.g. `VIEW-HD Ticket-1237/1239`), because the 
 
 | Where | What |
 |---|---|
-| Chatwoot Settings | `enabled`, `base_url`, `account_id`, `default_inbox_id`, `api_token`, `webhook_secret`, `webhook_key`, `internal_key`, `helpdesk_url`, labels, Agent Map (Helpdesk user ↔ Chatwoot agent), `send_customer_messages`, `notify_agents`, `whatsapp_paused`, `max_messages_per_minute`, `test_numbers`, welcome / agent message texts, **`sales_alert_tech_phone`** and **`sales_alert_sales_phone`** |
+| Chatwoot Settings | `enabled`, `base_url`, `account_id`, `default_inbox_id`, `api_token`, `webhook_secret`, `webhook_key`, `internal_key`, `helpdesk_url`, labels, Agent Map (Helpdesk user ↔ Chatwoot agent), `send_customer_messages`, `notify_agents`, `whatsapp_paused`, `max_messages_per_minute`, `test_numbers`, welcome / agent message texts, **`sales_alert_tech_phone`**, **`sales_alert_sales_phone`** and **`sales_alert_inbox_id`** |
 | Chatwoot webhook URL | The fixture ships the Server Script "Chatwoot Webhook" with api_method `chatwoot_webhook_change_me`. Rename it to `chatwoot_webhook_<random secret>` on each site (the suffix is a capability secret - never commit the real one), then run `setup_webhook`. |
 | Chatwoot webhook | System Manager: `POST /api/method/chatwoot_api` with `action=setup_webhook` registers `/api/method/chatwoot_webhook_<webhook_key>` in Chatwoot; "Test connection" / "Load agents from Chatwoot" buttons on Chatwoot Settings |
 | Helpdesk → Settings → Teams | Members of **Technical** and **Sales** (staff are not shipped) |
@@ -201,7 +207,7 @@ exist and are left alone.
 
 | Item | Repo version |
 |---|---|
-| Chatwoot Settings `sales_alert_*` | values (team phone numbers) are not shipped; set them after install |
+| Chatwoot Settings `sales_alert_*` | values (team phone numbers, Sales sender inbox id) are not shipped; set them after install |
 | Phone examples in validation messages (HD Ticket Caller Validation, Ticket Kanban, Chatwoot API comment) | `+2526XXXXXXXX`, `06XXXXXXXX`, `+44XXXXXXXXXX` |
 | HD Teams | no members, no WhatsApp group id, no assignment rule (Helpdesk creates the rule) |
 | Word templates | author metadata set to "Yooltech"; unused ink/signature parts removed from the team template |

@@ -78,6 +78,7 @@ fixtures = [
 			"Chatwoot Settings-internal_key",
 			"Chatwoot Settings-max_messages_per_minute",
 			"Chatwoot Settings-notify_agents",
+			"Chatwoot Settings-sales_alert_inbox_id",
 			"Chatwoot Settings-sales_alert_sales_phone",
 			"Chatwoot Settings-sales_alert_tech_phone",
 			"Chatwoot Settings-status_messages",

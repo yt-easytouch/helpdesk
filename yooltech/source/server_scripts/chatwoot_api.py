@@ -352,6 +352,9 @@ else:
 		elif action == "ensure_conversation":
 			# Find (or create) the customer's WhatsApp conversation in the default inbox, keyed like the
 			# sadarsms channel does: source_id = 252XXXXXXXXX@s.whatsapp.net. Creating one sends nothing.
+			# payload.inbox_id picks another inbox (= another WhatsApp sender number, e.g. the Sales Alert's
+			# Chatwoot Settings.sales_alert_inbox_id). A contact can have conversations in several inboxes: only a
+			# conversation IN that inbox is reused, otherwise a contact_inbox + conversation is created there.
 			full = intl(payload.get("phone"))
 			inbox = int(payload.get("inbox_id") or s.default_inbox_id or 0)
 			if not full or not inbox:
@@ -385,25 +388,34 @@ else:
 					if r["ok"]:
 						created.append("contact_inbox")
 				conv = None
+				conv_status = None
 				r = cw(ctx, "GET", "/contacts/" + str(contact["id"]) + "/conversations", None)
 				best = 0
 				for c in ((r["data"] or {}).get("payload") or []) if r["ok"] else []:
 					if c.get("inbox_id") == inbox and (payload.get("any_status") or c.get("status") in ["open", "pending", "snoozed"]) and (c.get("last_activity_at") or 0) >= best:
 						best = c.get("last_activity_at") or 0
 						conv = c.get("id")
+						conv_status = c.get("status")
 				if conv is None:
 					r = cw(ctx, "POST", "/conversations", {"source_id": jid, "inbox_id": inbox, "contact_id": contact["id"], "status": "open"})
 					conv = (r["data"] or {}).get("id") if r["ok"] else None
 					if conv:
 						created.append("conversation")
-				result = {"ok": bool(conv), "conversation_id": conv, "contact_id": contact["id"], "created": created,
-					"new_conversation": "conversation" in created, "log": r["log"]}
+						conv_status = "open"
+				result = {"ok": bool(conv), "conversation_id": conv, "contact_id": contact["id"], "inbox_id": inbox,
+					"conversation_status": conv_status, "created": created, "new_conversation": "conversation" in created, "log": r["log"]}
 
 		elif action == "send_agent_message":
 			# Staff WhatsApp (assignment brief). One conversation per agent in the default inbox is reused and left
 			# resolved afterwards, so staff messages do not crowd the agents' Open list.
+			# payload.inbox_id (optional): send from another inbox / WhatsApp number (the Sales Alert passes Chatwoot
+			# Settings.sales_alert_inbox_id; empty = default inbox). payload.keep_open: a conversation that was already
+			# open/pending before this message (a live staff chat in that inbox) is not resolved afterwards.
+			ep = {"phone": payload.get("phone"), "name": payload.get("name"), "ticket": payload.get("ticket"), "any_status": 1}
+			if payload.get("inbox_id"):
+				ep["inbox_id"] = int(payload.get("inbox_id"))
 			got = (run_script("Chatwoot API", action="ensure_conversation", internal_key=s.get_password("internal_key", raise_exception=False),
-				payload={"phone": payload.get("phone"), "name": payload.get("name"), "ticket": payload.get("ticket"), "any_status": 1}) or {}).get("chatwoot_result") or {}
+				payload=ep) or {}).get("chatwoot_result") or {}
 			cid = got.get("conversation_id")
 			if not cid:
 				result = {"ok": False, "error": "No conversation for the agent", "log": got.get("log")}
@@ -411,9 +423,11 @@ else:
 				ctx["conversation_id"] = cid
 				r = cw(ctx, "POST", "/conversations/" + str(cid) + "/messages",
 					{"content": str(payload.get("content") or "").strip(), "message_type": "outgoing", "private": False})
-				if r["ok"]:
+				was_live = (not got.get("new_conversation")) and got.get("conversation_status") in ["open", "pending"]
+				if r["ok"] and not (payload.get("keep_open") and was_live):
 					cw(ctx, "POST", "/conversations/" + str(cid) + "/toggle_status", {"status": "resolved"})
-				result = {"ok": r["ok"], "status": r["status"], "error": r["error"], "conversation_id": cid, "log": r["log"]}
+				result = {"ok": r["ok"], "status": r["status"], "error": r["error"], "conversation_id": cid,
+					"inbox_id": got.get("inbox_id"), "log": r["log"]}
 
 		elif action == "set_conversation_label":
 			cid = int(payload.get("conversation_id") or 0)

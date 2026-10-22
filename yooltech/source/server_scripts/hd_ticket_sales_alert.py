@@ -12,6 +12,10 @@
 # kooxaha) or in Chatwoot Settings: sales_alert_tech_phone ("Numberka Kooxda Technical (WhatsApp)", receives the
 # alert) and sales_alert_sales_phone ("Numberka Kooxda Sales", shown in the text). Both are normalized on save by
 # Server Script "Chatwoot Settings Team Numbers". Empty Technical number = no alert + one Skipped Sync Log row.
+# Sender: the alert goes out FROM the Chatwoot inbox in Chatwoot Settings sales_alert_inbox_id ("Sales alert inbox
+# (Chatwoot)", Kanban "Inbox-ka Sales (Chatwoot)") = the Sales WhatsApp number's inbox; empty = the default inbox.
+# The Technical number's conversation IN that inbox is reused (any status) or created there; a conversation that is
+# already open there (a live Sales <-> Technical chat) is left open (keep_open), others are resolved after sending.
 TECH_PHONE = ""
 SALES_PHONE = ""
 
@@ -69,8 +73,11 @@ if doc.source_team == "Sales":
 			"— Yooltech Helpdesk",
 		]
 		if TECH_PHONE:
-			run_script("Chatwoot API", action="send_agent_message", internal_key=s.get_password("internal_key", raise_exception=False),
-				payload={"phone": TECH_PHONE, "name": "Kooxda Technical (Yooltech)", "ticket": doc.name, "content": "\n".join(lines)})
+			p = {"phone": TECH_PHONE, "name": "Kooxda Technical (Yooltech)", "ticket": doc.name, "content": "\n".join(lines), "keep_open": 1}
+			inbox = frappe.utils.cint(s.get("sales_alert_inbox_id"))
+			if inbox > 0:
+				p["inbox_id"] = inbox
+			run_script("Chatwoot API", action="send_agent_message", internal_key=s.get_password("internal_key", raise_exception=False), payload=p)
 		else:
 			frappe.get_doc({"doctype": "Chatwoot Sync Log", "direction": "Outbound", "event": "send_agent_message",
 				"status": "Skipped", "reference_ticket": doc.name,
