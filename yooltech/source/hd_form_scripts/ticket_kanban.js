@@ -21,6 +21,10 @@
 //   Assigned / In Progress. Entering Sales sends no customer WhatsApp ("HD Ticket Chatwoot Sync").
 //   Managers: "⚙ Team numbers / Numbarrada kooxaha" (column ⋮ menu and the WhatsApp switch menu) edits the
 //   Sales-alert numbers in Chatwoot Settings through chatwoot_message_templates action=team_numbers.
+// - Sales defaults (2026-10-22): a member of HD Team "Sales" who is not in "Technical" gets the new-ticket form with
+//   Team = Sales and Column = SALES, both locked. Everyone else: picking Team Sales moves Column to SALES, picking
+//   another team moves it back to CUSUB. Test hooks (no save): __yoolKanban.newTicketDefaults(user),
+//   __yoolKanban.openNewTicket(null, { asUser: user }) shows that user's defaults with Create disabled.
 // - Card "⋮" menu / Space opens a Preview panel on the right (?preview=<ticket> in the URL), fed by the API
 //   server script "yool_ticket_preview"; status / priority / assignment changes there update the card.
 // No Helpdesk files are changed. Customers never get this view (agent route only).
@@ -635,6 +639,16 @@ function setupForm({ router }) {
 		const salesSet = new Set((salesTeam || []).filter(Boolean));
 		const myId = (me && me.user_id) || "";
 		const myTeam = salesSet.has(myId) ? "Sales" : techSet.has(myId) ? "Technical" : "";
+		// New-ticket defaults for a user: { team, status ("" = CUSUB), locked }. Sales-only members are locked to the
+		// Sales team + SALES column (when HD Ticket Status "Sales" is enabled) so their work never lands in a technical column.
+		const newTicketDefaults = (user) => {
+			const inSales = salesSet.has(user);
+			const inTech = techSet.has(user);
+			const team = inSales ? "Sales" : inTech ? "Technical" : "";
+			const lane = statuses.some((s) => s.name === "Sales");
+			return { team, status: team === "Sales" && lane ? "Sales" : "", locked: inSales && !inTech };
+		};
+		state.newTicketDefaults = newTicketDefaults;
 		if (techSet.size) {
 			const techAgents = agents.filter((a) => techSet.has(a.name));
 			if (techAgents.length) agents = techAgents;
@@ -2810,7 +2824,10 @@ function setupForm({ router }) {
 
 		// Quick "New ticket" dialog (Figma modal + inputs): from the header, or a column's ＋ (status preset).
 		// Saves through frappe.client.insert, so the HD Ticket rules (caller validation, Chatwoot link) all apply.
-		const openNewTicket = (presetStatus) => {
+		const openNewTicket = (presetStatus, opts) => {
+			// opts.asUser: preview another user's defaults (testing only — Create stays disabled).
+			const asUser = (opts && opts.asUser) || "";
+			const def = newTicketDefaults(asUser || myId);
 			const returnFocus = document.activeElement;
 			const overlay = el("div", "position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(7,10,14,0.4);font-family:" + T.font + ";");
 			overlay.dataset.yoolPop = "1";
@@ -2830,6 +2847,7 @@ function setupForm({ router }) {
 			const title = el("div", "font:600 18px/28px " + T.font + ";", "New ticket");
 			title.id = "yool-nt-title";
 			titles.append(title, el("div", "font:400 14px/20px " + T.font + ";color:" + T.text500 + ";", "Log a customer request. Fields with * are required."));
+			if (asUser) title.textContent = "New ticket — preview as " + asUser;
 			const closeX = btnGhostIcon('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>', "Close");
 			head.append(badge, titles, closeX);
 
@@ -2928,21 +2946,42 @@ function setupForm({ router }) {
 			// Ka yimid / Raised by team (HD Ticket.source_team); defaults to the user's HD Team.
 			const teamPick = dropdown("Not set");
 			teamPick.setOptions([{ value: "Sales", label: "Sales" }, { value: "Technical", label: "Technical" }]);
-			teamPick.value = myTeam;
+			teamPick.value = def.team;
 			teamPick.style.width = "100%";
 			const teamHint = el("span", "font:400 12px/18px " + T.font + ";color:" + T.text300 + ";");
 			const paintTeamHint = () =>
 				(teamHint.textContent =
 					teamPick.value === "Sales" ? "Kooxda Technical ayaa WhatsApp loogu diraa / Technical team gets a WhatsApp alert." : "Kooxda soo gudbisay shaqada / Team raising this work.");
-			teamPick.addEventListener("change", paintTeamHint);
 			paintTeamHint();
 			field("Team (Ka yimid)", teamPick, { hint: teamHint });
 
+			const salesCol = statuses.find((s) => s.name === "Sales");
+			const colOpts = visibleColumns().filter((s) => s.name !== "New");
+			if (salesCol && !colOpts.some((s) => s.name === "Sales")) colOpts.unshift(salesCol); // hidden by the user: still pickable
 			const statusSel = dropdown(colLabel(statuses.find((s) => s.name === "New") || { name: "New" }));
-			statusSel.setOptions(visibleColumns().filter((s) => s.name !== "New").map((s) => ({ value: s.name, label: colLabel(s) })));
-			statusSel.value = presetStatus && presetStatus !== "New" ? presetStatus : "";
+			statusSel.setOptions(colOpts.map((s) => ({ value: s.name, label: colLabel(s) })));
+			statusSel.value = def.locked ? def.status : presetStatus && presetStatus !== "New" ? presetStatus : def.status;
 			statusSel.style.width = "100%";
-			field("Column", statusSel);
+			const lockHint = el("span", "display:none;font:400 12px/18px " + T.font + ";color:" + T.text300 + ";", "Kooxda Sales: shaqadu waxay gashaa tiirka " + (salesCol ? colLabel(salesCol) : "SALES"));
+			field("Column", statusSel, { hint: lockHint });
+			// Team Sales -> column SALES; leaving Sales -> back to CUSUB (managers can still pick another column).
+			teamPick.addEventListener("change", () => {
+				paintTeamHint();
+				if (teamPick.value === "Sales" && salesCol) statusSel.value = "Sales";
+				else if (teamPick.value !== "Sales" && statusSel.value === "Sales") statusSel.value = "";
+			});
+			if (def.locked) {
+				[teamPick, statusSel].forEach((b) => {
+					b.disabled = true;
+					b.setAttribute("aria-disabled", "true");
+					b.style.cursor = "not-allowed";
+					b.style.background = T.subtle;
+					b.firstChild.style.color = T.text500; // value label
+					b.lastChild.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+					b.title = "Kooxda Sales: Team iyo Column waa go'an / Locked for the Sales team";
+				});
+				lockHint.style.display = "block";
+			}
 
 			const agentSel = dropdown("Unassigned");
 			agentSel.setOptions(agents.map((a) => ({ value: a.name, label: a.agent_name || a.name, lead: () => avatarOf(a.agent_name || a.name, a.user_image, 24) })));
@@ -2957,6 +2996,11 @@ function setupForm({ router }) {
 			const note = el("span", "flex:1;min-width:0;font:400 12px/18px " + T.font + ";color:" + T.text300 + ";", "The caller gets a WhatsApp confirmation when WhatsApp is on.");
 			const cancel = btnSecondary("Cancel");
 			const save = btnPrimary("Create ticket");
+			if (asUser) {
+				save.disabled = true;
+				save.title = "Preview only";
+				save.style.opacity = "0.5";
+			}
 			foot.append(note, cancel, save);
 			card.append(head, body, foot);
 			overlay.append(card);
@@ -3010,6 +3054,11 @@ function setupForm({ router }) {
 				return (c.startsWith("+") || c.startsWith("00")) && /^[1-9]\d{7,14}$/.test(d);
 			};
 			save.addEventListener("click", async () => {
+				if (asUser) return;
+				if (def.locked) {
+					teamPick.value = "Sales"; // locked: never trust a changed control
+					statusSel.value = def.status;
+				}
 				const errs = [
 					[fSubject, subject.value.trim() ? "" : "Write a short subject."],
 					[fCaller, callerName.value.trim() ? "" : "Enter the caller's name."],
@@ -3059,6 +3108,8 @@ function setupForm({ router }) {
 				}
 			});
 		};
+
+		state.openNewTicket = openNewTicket;
 
 		// Column ⋮ menu — Figma "Dropdown menu" panel + list items (line icons, grouped sections, color swatches).
 		const ARROW = {
