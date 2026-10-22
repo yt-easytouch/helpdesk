@@ -20,6 +20,8 @@ la rakibi karo: `yooltech/yool_theme`. Koodka Helpdesk-ka laftiisa waxba lagama 
   (Assigned / In Progress). Macmiilka fariin looma diro marka ticket-ku SALES galo. Numbarrada kooxaha waxaa
   laga beddelaa Kanban-ka: "⚙ Team numbers / Numbarrada kooxaha" (maamulayaasha keliya). Fariinta Sales waxaa
   laga diraa numberka WhatsApp ee Sales: "Inbox-ka Sales (Chatwoot)" ee isla daaqaddaas (bannaan = inbox-ka caadiga).
+- **Assigned = injineer** — tiirka Assigned lama gelin karo injineer kooxda Technical ah la'aantiis; Kanban-ku wuxuu
+  furaa "Dooro injineerka", fariinta WhatsApp ee macmiilkana waxay sheegtaa magaca iyo numberka injineerka.
 - **Naqshadda Figma** — sidebar-ka Desk, Helpdesk, CRM iyo portal-ka.
 
 **Waxa aan git-ka la gelin (admin-ka ayaa gacanta ku gelinaya):** furayaasha Chatwoot (API token, webhook key,

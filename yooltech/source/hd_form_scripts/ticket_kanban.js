@@ -28,6 +28,11 @@
 //   __yoolKanban.openNewTicket(null, { asUser: user }) shows that user's defaults with Create disabled.
 // - Card "⋮" menu / Space opens a Preview panel on the right (?preview=<ticket> in the URL), fed by the API
 //   server script "yool_ticket_preview"; status / priority / assignment changes there update the card.
+// - Assigned needs an engineer (2026-10-22): moving a card (or the preview Status) into Assigned without an HD Team
+//   "Technical" assignee opens "Dooro injineerka / Assign engineer" (single-select); OK assigns via assign_to.add, then
+//   moves; Cancel leaves the card. Server Script "HD Ticket Assigned Requires Engineer" is the safety net (its error
+//   reopens the modal, one retry). New-ticket form: Column = Assigned makes "Assign to" required. Test hooks:
+//   __yoolKanban.engineerPicker.open(name) (no save), __yoolKanban.moveTicket(name, status) (= drag & drop path).
 // No Helpdesk files are changed. Customers never get this view (agent route only).
 function setupForm({ router }) {
 	const VIEW = "VIEW-HD Ticket-1239";
@@ -1464,10 +1469,200 @@ function setupForm({ router }) {
 			read: readTicketTypes,
 		};
 
-		const moveTicket = async (name, from, to, typeChecked) => {
+		// ---------- engineer guard (Assigned) ----------
+		// Server Script "HD Ticket Assigned Requires Engineer" blocks moving a ticket INTO "Assigned" unless one of its
+		// assignees is in HD Team "Technical". Same pattern as the type guard: ask first in a modal ("Dooro injineerka /
+		// Assign engineer", single-select of Technical members), assign through frappe.desk.form.assign_to.add (the call
+		// the preview "Assign" uses, so ToDo + agent WhatsApp flow as usual), THEN change the status — so the customer's
+		// "Assigned" WhatsApp ("HD Ticket Chatwoot Sync") already names the engineer + phone. Server guard = safety net.
+		const needsEngineerForStatus = (to) => to === "Assigned" && techSet.size > 0;
+		const ENGINEER_GUARD_RE = /u xilsaar injineer|assign a technical engineer/i;
+		// Resolves to the picked user id, or null on Cancel / Esc. Keys: ↑/↓ highlight, Enter picks + confirms.
+		const pickEngineer = (ticketName, subject) =>
+			new Promise((resolve) => {
+				const returnFocus = document.activeElement;
+				const overlay = el("div", "position:fixed;inset:0;z-index:9990;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(7,10,14,0.4);font-family:" + T.font + ";");
+				overlay.dataset.yoolPop = "1";
+				overlay.dataset.yoolEngineerPicker = "1";
+				const card = el(
+					"div",
+					"width:min(440px,100%);box-sizing:border-box;padding:24px;border-radius:0;border:1px solid " + T.border + ";background:" + T.surface + ";" +
+						"color:" + T.text900 + ";box-shadow:0 24px 48px -12px rgba(16,24,32,0.18);display:flex;flex-direction:column;gap:12px;"
+				);
+				card.setAttribute("role", "dialog");
+				card.setAttribute("aria-modal", "true");
+				card.setAttribute("aria-labelledby", "yool-eng-title");
+				const title = el("div", "font:600 16px/24px " + T.font + ";", "Dooro injineerka / Assign engineer");
+				title.id = "yool-eng-title";
+				const sub = el(
+					"div",
+					"font:500 13px/20px " + T.font + ";color:" + T.text500 + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;",
+					"#" + ticketName + (subject ? " — " + subject : "")
+				);
+				const hint = el(
+					"div",
+					"font:500 12px/18px " + T.font + ";color:" + T.text300 + ";",
+					"Assigned waxay u baahan tahay hal injineer (Technical) / Assigned needs one Technical engineer. Macmiilka WhatsApp-kiisu wuxuu sheegayaa magaca iyo numberka injineerka."
+				);
+				const input = el(
+					"input",
+					"height:36px;padding:8px 12px;box-sizing:border-box;border-radius:0;border:1px solid " + T.border + ";background:" + T.surface + ";" +
+						"color:" + T.text900 + ";font:500 14px/20px " + T.font + ";outline:none;width:100%;"
+				);
+				input.type = "text";
+				input.placeholder = "Raadi / Search…";
+				input.addEventListener("focus", () => (input.style.borderColor = T.brand));
+				input.addEventListener("blur", () => (input.style.borderColor = T.border));
+				const listBox = el("div", "max-height:260px;overflow:auto;display:flex;flex-direction:column;border:1px solid " + T.divider + ";");
+				listBox.setAttribute("role", "listbox");
+				const btns = el("div", "display:flex;justify-content:flex-end;gap:12px;margin-top:4px;");
+				const cancel = btnSecondary("Cancel");
+				const ok = btnPrimary("OK");
+				cancel.style.borderRadius = ok.style.borderRadius = "0";
+				btns.append(cancel, ok);
+				card.append(title, sub, hint, input, listBox, btns);
+				overlay.append(card);
+				document.body.append(overlay);
+				const pool = agents.filter((a) => techSet.has(a.name));
+				let chosen = "";
+				let visible = [];
+				let hl = -1;
+				const setOk = () => {
+					ok.disabled = !chosen;
+					ok.style.opacity = chosen ? "1" : "0.5";
+					ok.style.cursor = chosen ? "pointer" : "default";
+				};
+				const renderList = (keepHl) => {
+					const q = input.value.trim().toLowerCase();
+					visible = pool.filter((a) => !q || (a.agent_name || a.name).toLowerCase().includes(q) || a.name.toLowerCase().includes(q));
+					if (!keepHl) hl = q && visible.length ? 0 : -1;
+					if (hl >= visible.length) hl = visible.length - 1;
+					listBox.textContent = "";
+					if (!visible.length)
+						return listBox.append(el("div", "padding:10px 12px;font:500 13px/20px " + T.font + ";color:" + T.text300 + ";", pool.length ? "No matching engineer" : "Kooxda Technical waa madhan / The Technical team is empty"));
+					visible.forEach((a, i) => {
+						const selected = chosen === a.name;
+						const isHl = hl === i;
+						const row = el(
+							"button",
+							"display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 12px;box-sizing:border-box;border:0;border-radius:0;cursor:pointer;" +
+								"font:500 14px/20px " + T.font + ";background:" + (selected ? T.brandSoftBg : isHl ? T.subtle : T.surface) + ";color:" + (selected ? T.brandSoftText : T.text900) + ";" +
+								(isHl ? "box-shadow:inset 3px 0 0 " + T.brand + ";" : "")
+						);
+						row.type = "button";
+						row.setAttribute("role", "option");
+						row.setAttribute("aria-selected", selected ? "true" : "false");
+						row.dataset.yoolEngineerRow = a.name;
+						const label = el("span", "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;", a.agent_name || a.name);
+						row.append(avatarOf(a.agent_name || a.name, a.user_image, 24), label);
+						if (selected) row.append(el("span", "font:700 13px/1 " + T.font + ";color:" + T.brand + ";", "✓"));
+						row.addEventListener("mouseenter", () => !selected && (row.style.background = T.subtle));
+						row.addEventListener("mouseleave", () => (row.style.background = chosen === a.name ? T.brandSoftBg : hl === i ? T.subtle : T.surface));
+						row.addEventListener("click", () => {
+							hl = i;
+							chosen = a.name;
+							setOk();
+							renderList(true);
+						});
+						row.addEventListener("dblclick", () => close(a.name));
+						listBox.append(row);
+						if (isHl && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+					});
+				};
+				const close = (result) => {
+					overlay.remove();
+					document.removeEventListener("keydown", onKey, true);
+					if (returnFocus && returnFocus.focus && document.contains(returnFocus)) returnFocus.focus();
+					resolve(result || null);
+				};
+				const onKey = (e) => {
+					if (e.key === "Escape") {
+						e.preventDefault();
+						e.stopPropagation();
+						close(null);
+					} else if (e.key === "Enter") {
+						e.preventDefault();
+						e.stopPropagation();
+						if (hl >= 0 && visible[hl]) close(visible[hl].name);
+						else if (chosen) close(chosen);
+					} else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && visible.length) {
+						e.preventDefault();
+						e.stopPropagation();
+						const n = visible.length;
+						hl = e.key === "ArrowDown" ? (hl + 1) % n : hl <= 0 ? n - 1 : hl - 1;
+						renderList(true);
+					} else e.stopPropagation(); // keep board shortcuts out; typing still reaches the input
+				};
+				document.addEventListener("keydown", onKey, true);
+				overlay.addEventListener("mousedown", (e) => e.target === overlay && close(null));
+				cancel.addEventListener("click", () => close(null));
+				ok.addEventListener("click", () => chosen && close(chosen));
+				input.addEventListener("input", () => renderList());
+				setOk();
+				renderList();
+				input.focus();
+			});
+		// Current assignees (open ToDos via _assign) + subject.
+		const readAssignees = async (name) => {
+			const v = await api("frappe.client.get_value", { doctype: "HD Ticket", filters: { name: String(name) }, fieldname: ["_assign", "subject"] });
+			let users = [];
+			try {
+				users = JSON.parse((v && v._assign) || "[]") || [];
+			} catch (e) {
+				users = [];
+			}
+			return { users, subject: (v && v.subject) || "" };
+		};
+		// True = go ahead with the status change (not needed, already has a Technical assignee, or picked + assigned now).
+		// False = cancelled (or the assignment failed): skip the move. `force` skips the pre-check (server guard said no).
+		const ensureEngineer = async (name, to, force) => {
+			if (!needsEngineerForStatus(to)) return true;
+			let info;
+			try {
+				info = await readAssignees(name);
+			} catch (e) {
+				if (!force) return true; // could not check: let the server-side guard decide
+				info = { users: [], subject: "" };
+			}
+			if (!force && info.users.some((u) => techSet.has(u))) return true;
+			const user = await pickEngineer(name, info.subject);
+			if (!user) return false;
+			try {
+				if (!info.users.includes(user))
+					await api("frappe.desk.form.assign_to.add", { doctype: "HD Ticket", name: String(name), assign_to: JSON.stringify([user]) }, true);
+			} catch (e) {
+				toast("#" + name + ": could not assign the engineer: " + e.message);
+				return false;
+			}
+			const f = findTicket(name);
+			if (f) {
+				f.t._assign = JSON.stringify(info.users.includes(user) ? info.users : info.users.concat([user]));
+				render();
+			}
+			return true;
+		};
+		// Console / test hooks. engineerPicker.open: modal only, nothing saved. moveTicket: the drag & drop path
+		// (pre-checks + set_value) for a card on the board, e.g. __yoolKanban.moveTicket("1243", "Assigned").
+		state.engineerPicker = {
+			open: async (name) => {
+				const info = await readAssignees(name);
+				return pickEngineer(name, info.subject);
+			},
+			read: readAssignees,
+		};
+		state.moveTicket = (name, to) => {
+			const f = findTicket(name);
+			if (!f) return Promise.reject(new Error("#" + name + " is not on the board"));
+			return moveTicket(String(f.t.name), f.status, to);
+		};
+
+		// `checked` = the pre-checks already ran; `retried` = this is the one retry after a server-guard error.
+		const moveTicket = async (name, from, to, checked, retried) => {
 			if (!name || from === to) return;
 			// Closing without a type dead-ends on the server guard — ask for the type first.
-			if (!typeChecked && !(await ensureTicketType(name, to))) return; // cancelled: card stays put
+			if (!checked && !(await ensureTicketType(name, to))) return; // cancelled: card stays put
+			// Assigned without a Technical engineer dead-ends too — pick + assign the engineer first.
+			if (!checked && !(await ensureEngineer(name, to))) return; // cancelled: card stays put
 			statuses
 				.filter((x) => x.name === from || x.name === to)
 				.forEach((x) => {
@@ -1496,8 +1691,13 @@ function setupForm({ router }) {
 				src.count += 1;
 				render();
 				// The server guard caught a path the pre-check missed: ask for the type, then retry once.
-				if (TYPE_GUARD_RE.test(e.message || "")) {
-					if (await ensureTicketType(name, to)) await moveTicket(name, from, to, true);
+				if (!retried && TYPE_GUARD_RE.test(e.message || "")) {
+					if (await ensureTicketType(name, to)) await moveTicket(name, from, to, true, true);
+					return;
+				}
+				// Same for the engineer guard: open the engineer modal (no pre-check), assign, retry once.
+				if (!retried && ENGINEER_GUARD_RE.test(e.message || "")) {
+					if (await ensureEngineer(name, to, true)) await moveTicket(name, from, to, true, true);
 					return;
 				}
 				toast("#" + name + " could not be moved: " + e.message);
@@ -1945,12 +2145,16 @@ function setupForm({ router }) {
 				else {
 					// Card not on the board (filtered out): same ticket-type guard as drag & drop.
 					if (!(await ensureTicketType(d.name, to))) return; // cancelled: nothing changes
+					if (!(await ensureEngineer(d.name, to))) return; // Assigned: engineer first (cancel = no change)
 					const set = () => api("frappe.client.set_value", { doctype: "HD Ticket", name: String(d.name), fieldname: "status", value: to }, true);
 					try {
 						await set();
 					} catch (e) {
-						if (!TYPE_GUARD_RE.test(e.message || "")) throw e;
-						if (await ensureTicketType(d.name, to)) await set();
+						if (TYPE_GUARD_RE.test(e.message || "")) {
+							if (await ensureTicketType(d.name, to)) await set();
+						} else if (ENGINEER_GUARD_RE.test(e.message || "")) {
+							if (await ensureEngineer(d.name, to, true)) await set();
+						} else throw e;
 					}
 				}
 			});
@@ -3025,7 +3229,17 @@ function setupForm({ router }) {
 			const agentSel = dropdown("Unassigned");
 			agentSel.setOptions(agents.map((a) => ({ value: a.name, label: a.agent_name || a.name, lead: () => avatarOf(a.agent_name || a.name, a.user_image, 24) })));
 			agentSel.style.width = "100%";
-			field("Assign to", agentSel);
+			const fAgent = field("Assign to", agentSel);
+			// Column = Assigned needs an engineer (Server Script "HD Ticket Assigned Requires Engineer" checks yool_assign_to).
+			const agentStar = el("span", "display:none;color:#d92d20;", " *");
+			fAgent.firstChild.append(agentStar);
+			const paintAgentReq = () => {
+				agentStar.style.display = statusSel.value === "Assigned" ? "inline" : "none";
+				if (statusSel.value !== "Assigned" || agentSel.value) fAgent.setError("");
+			};
+			statusSel.addEventListener("change", paintAgentReq);
+			agentSel.addEventListener("change", paintAgentReq);
+			paintAgentReq();
 
 			const desc = focusRing(el("textarea", inputStyle + "width:100%;height:auto;min-height:96px;resize:vertical;"));
 			desc.placeholder = "What happened? Steps, error messages, anything that helps.";
@@ -3103,6 +3317,7 @@ function setupForm({ router }) {
 					[fCaller, callerName.value.trim() ? "" : "Enter the caller's name."],
 					[fPhone, !phone.value.trim() ? "Enter the caller's phone." : validPhone(phone.value) ? "" : "Geli number Soomaali ah ama mid caalami ah (+country code), tusaale +2526XXXXXXXX ama +44XXXXXXXXXX."],
 					[fCompany, coIn.value.trim() && !company ? "Pick a company from the list, or clear the field." : ""],
+					[fAgent, statusSel.value === "Assigned" && !agentSel.value ? "Assigned: dooro injineerka / Pick the engineer." : ""],
 				];
 				errs.forEach(([f, m]) => f.setError(m));
 				const first = errs.find(([, m]) => m);

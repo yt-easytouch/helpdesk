@@ -118,6 +118,7 @@ fixtures = [
 			"Chatwoot Webhook Old URL",
 			"Engineer Monthly Report Permission",
 			"Engineer Monthly Report Validate",
+			"HD Ticket Assigned Requires Engineer",
 			"HD Ticket Caller Validation",
 			"HD Ticket Chatwoot Link",
 			"HD Ticket Chatwoot Sync",

@@ -105,6 +105,15 @@ Technical, after `agent_group`); **HD Ticket Source Team** (Before Save, new tic
 creator's team; **HD Ticket Sales Alert** (After Insert) sends ONE WhatsApp brief about every new Sales ticket
 to the Technical team number. Team members are **not** shipped (see Configuration).
 
+**Assigned needs an engineer**: **HD Ticket Assigned Requires Engineer** (Before Save) blocks a status change
+INTO "Assigned" unless an assignee (`_assign` / open ToDo; on insert the Kanban's `yool_assign_to`) is a
+Technical member (empty team = no check). The Kanban asks first: drag (or preview Status) to Assigned opens
+"Dooro injineerka / Assign engineer" (single-select of Technical members); OK assigns via
+`frappe.desk.form.assign_to.add`, then moves; Cancel leaves the card; the server error reopens the modal and
+retries once. New-ticket form: Column = Assigned makes "Assign to" required. HD Ticket Chatwoot Sync's Assigned
+message names the engineer at send time: "... waxaa loo xilsaaray injineerkeena <full name> (<+252… phone>) ..."
+(User mobile_no / phone, else the active Employee's cell_number; no phone = no parentheses).
+
 **Sales lane**: HD Ticket Status **Sales** (category Open; Kanban column label "SALES" from HD Kanban Settings,
 shown before CUSUB). HD Ticket Source Team puts new Sales tickets there instead of the default new status, and
 keeps them there when Helpdesk's own "customer replied" reset would move them back to New; the Technical team
