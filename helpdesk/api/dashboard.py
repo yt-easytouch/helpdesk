@@ -1,3 +1,4 @@
+import math
 import operator
 from functools import reduce
 
@@ -47,7 +48,7 @@ def get_dashboard_data(
         agent = frappe.session.user
 
     if not from_date:
-        from_date = frappe.utils.add_days(frappe.utils.nowdate(), -30)
+        from_date = frappe.utils.add_days(frappe.utils.nowdate(), -29)
     if not to_date:
         to_date = frappe.utils.nowdate()
 
@@ -68,6 +69,10 @@ def get_dashboard_data(
         )
     elif dashboard_type == "trend":
         return dashboard.get_trend_data()
+    elif dashboard_type == "tags":
+        from helpdesk.api.dashboard_tags import TagDashboard
+
+        return TagDashboard(_filters).get_tag_chart_data()
 
 
 class HelpdeskDashboard:
@@ -84,10 +89,9 @@ class HelpdeskDashboard:
             reduce(operator.and_, self.qb_conds) if self.qb_conds else None
         )
 
-        self.diff = frappe.utils.date_diff(self.to_date, self.from_date)
-        if self.diff == 0:
-            self.diff = 1
-        self.prev_from_date = frappe.utils.add_days(self.from_date, -self.diff)
+        # compare with the same number of days right before this period
+        self.period_days = frappe.utils.date_diff(self.to_date, self.from_date) + 1
+        self.prev_from_date = frappe.utils.add_days(self.from_date, -self.period_days)
         self.to_date_next = frappe.utils.add_days(self.to_date, 1)
 
         self.open_statuses = frappe.get_all(
@@ -114,8 +118,9 @@ class HelpdeskDashboard:
             )
         return conds
 
-    def _get_case(self, start, end, value, func, extra_cond=None):
-        cond = (self.ticket.creation >= start) & (self.ticket.creation < end)
+    def _get_case(self, start, end, value, func, extra_cond=None, date_field=None):
+        date_field = date_field or self.ticket.creation
+        cond = (date_field >= start) & (date_field < end)
         if extra_cond:
             cond = cond & extra_cond
         if self.combined_cond:
@@ -123,32 +128,55 @@ class HelpdeskDashboard:
 
         return func(Case().when(cond, value).else_(None))
 
-    def get_metric_data(self, value, func, extra_cond=None):
+    def get_metric_data(self, value, func, extra_cond=None, date_field=None):
         current_expr = self._get_case(
-            self.from_date, self.to_date_next, value, func, extra_cond
+            self.from_date, self.to_date_next, value, func, extra_cond, date_field
         )
         prev_expr = self._get_case(
-            self.prev_from_date, self.from_date, value, func, extra_cond
+            self.prev_from_date, self.from_date, value, func, extra_cond, date_field
         )
 
         query = frappe.qb.from_(self.ticket).select(
             current_expr.as_("current"), prev_expr.as_("prev")
         )
         result = query.run(as_dict=True)
-        return result[0].current or 0, result[0].prev or 0
+        # average stays None when the period has no tickets
+        return result[0].current, result[0].prev
+
+    def round_or_none(self, value, digits=1):
+        return None if value is None else round(value, digits)
+
+    def get_change(self, current, prev, digits=1):
+        # an empty period on either side leaves nothing to compare
+        if current is None or prev is None:
+            return None
+        return round(current - prev, digits)
 
     def get_number_card_data(self):
-        return [
+        cards = [
             self.get_ticket_count(),
             self.get_sla_fulfilled_count(),
             self.get_avg_first_response_time(),
             self.get_avg_resolution_time(),
             self.get_avg_feedback_score(),
         ]
+        caption = self.get_delta_caption()
+        for card in cards:
+            if card["delta"] is not None:
+                card["deltaCaption"] = caption
+        return cards
+
+    def get_delta_caption(self):
+        if self.period_days > 1:
+            return _("vs prev. {0} days").format(self.period_days)
+        if frappe.utils.getdate(self.to_date) == frappe.utils.getdate():
+            return _("vs yesterday")
+        return _("vs prev. day")
 
     def get_ticket_count(self):
         current, prev = self.get_metric_data(self.ticket.name, Count)
-        delta = ((current - prev) / prev * 100) if prev else 0
+        # no previous period to compare against: no delta, not a 0% change
+        delta = round((current - prev) / prev * 100) if prev else None
 
         return {
             "title": _("Tickets"),
@@ -160,80 +188,90 @@ class HelpdeskDashboard:
         }
 
     def get_sla_fulfilled_count(self):
-        extra_cond = self.ticket.agreement_status == "Fulfilled"
+        # the numerator must stay a subset of the denominator, else the
+        # percentage can exceed 100 (a response-only SLA marks an open ticket
+        # Fulfilled, which no resolved-status filter would count)
+        status_cond = self.ticket.sla.isnotnull()
+        if self.resolved_statuses:
+            status_cond = status_cond & self.ticket.status.isin(self.resolved_statuses)
         current_fulfilled, prev_fulfilled = self.get_metric_data(
-            self.ticket.name, Count, extra_cond
-        )
-
-        status_cond = (
-            self.ticket.status.isin(self.resolved_statuses)
-            if self.resolved_statuses
-            else None
+            self.ticket.name,
+            Count,
+            status_cond & (self.ticket.agreement_status == "Fulfilled"),
         )
         current_total, prev_total = self.get_metric_data(
             self.ticket.name, Count, status_cond
         )
 
-        current_pct = (current_fulfilled / current_total * 100) if current_total else 0
-        prev_pct = (prev_fulfilled / prev_total * 100) if prev_total else 0
+        # no resolved tickets means there is no SLA % to show
+        current_pct = (
+            (current_fulfilled / current_total * 100) if current_total else None
+        )
+        prev_pct = (prev_fulfilled / prev_total * 100) if prev_total else None
 
         return {
             "title": _("% SLA Fulfilled"),
-            "value": current_pct,
+            "value": self.round_or_none(current_pct, 0),
             "suffix": "%",
-            "delta": current_pct - prev_pct,
+            "delta": self.get_change(current_pct, prev_pct, 0),
             "deltaSuffix": "%",
             "tooltip": _("% of tickets created that were resolved within SLA"),
         }
 
     def get_avg_first_response_time(self):
-        extra_cond = self.ticket.first_responded_on.isnotnull()
+        extra_cond = (
+            self.ticket.sla.isnotnull() & self.ticket.first_responded_on.isnotnull()
+        )
         current, prev = self.get_metric_data(
             self.ticket.first_response_time / 3600, Avg, extra_cond
         )
 
         return {
             "title": _("Avg. First Response"),
-            "value": current,
+            "value": self.round_or_none(current),
             "suffix": " " + _("hrs"),
-            "delta": current - prev,
+            "delta": self.get_change(current, prev),
             "deltaSuffix": " " + _("hrs"),
             "negativeIsBetter": True,
             "tooltip": _("Avg. time taken to first respond to a ticket"),
         }
 
     def get_avg_resolution_time(self):
-        extra_cond = (
-            self.ticket.status.isin(self.resolved_statuses)
-            if self.resolved_statuses
-            else None
-        )
+        extra_cond = self.ticket.sla.isnotnull()
+        if self.resolved_statuses:
+            extra_cond = extra_cond & self.ticket.status.isin(self.resolved_statuses)
         value_expr = Function("CEIL", self.ticket.resolution_time / 86400)
         current, prev = self.get_metric_data(value_expr, Avg, extra_cond)
 
         return {
             "title": _("Avg. Resolution"),
-            "value": current,
+            "value": self.round_or_none(current),
             "suffix": " " + _("days"),
-            "delta": current - prev,
+            "delta": self.get_change(current, prev),
             "deltaSuffix": " " + _("days"),
             "negativeIsBetter": True,
             "tooltip": _("Avg. time taken to resolve a ticket"),
         }
 
     def get_avg_feedback_score(self):
+        # Feedback belongs to the period a ticket was resolved in, not when it
+        # was raised, so include every ticket resolved within the date range
+        # regardless of its creation date.
         extra_cond = self.ticket.feedback_rating > 0
         current, prev = self.get_metric_data(
-            self.ticket.feedback_rating, Avg, extra_cond
+            self.ticket.feedback_rating * 5,
+            Avg,
+            extra_cond,
+            date_field=self.ticket.resolution_date,
         )
 
         return {
             "title": _("Avg. Feedback Rating"),
-            "value": current * 5,
+            "value": self.round_or_none(current),
             "suffix": "/5",
-            "delta": (current - prev) * 5,
+            "delta": self.get_change(current, prev),
             "deltaSuffix": " " + _("stars"),
-            "tooltip": _("Avg. feedback rating for the tickets resolved"),
+            "tooltip": _("Avg. feedback rating for tickets resolved in this period"),
         }
 
     def get_trend_data(self):
@@ -252,6 +290,9 @@ class HelpdeskDashboard:
         )
         if self.combined_cond:
             base_cond = base_cond & self.combined_cond
+        sla_resolved_cond = self.ticket.sla.isnotnull() & self.ticket.status.isin(
+            self.resolved_statuses
+        )
 
         query = (
             frappe.qb.from_(self.ticket)
@@ -270,10 +311,20 @@ class HelpdeskDashboard:
                     )
                     .else_(None)
                 ).as_(closed_status),
-                Count(
-                    Case()
-                    .when(self.ticket.agreement_status == "Fulfilled", self.ticket.name)
-                    .else_(None)
+                (
+                    Count(
+                        Case()
+                        .when(
+                            sla_resolved_cond
+                            & (self.ticket.agreement_status == "Fulfilled"),
+                            self.ticket.name,
+                        )
+                        .else_(None)
+                    )
+                    * 100
+                    / Count(
+                        Case().when(sla_resolved_cond, self.ticket.name).else_(None)
+                    )
                 ).as_(sla_fulfilled_status),
             )
             .where(base_cond)
@@ -289,38 +340,38 @@ class HelpdeskDashboard:
 
         return get_bar_chart_config(
             result,
+            "ticket_trend",
             _("Ticket Trend"),
             subtitle,
-            {"key": "date", "type": "time", "title": "Date", "timeGrain": "day"},
+            "date",
+            {"type": "time", "title": "Date", "timeGrain": "day"},
             _("Tickets"),
-            [
-                {"name": closed_status, "type": "bar"},
-                {"name": open_status, "type": "bar"},
-                {
-                    "name": sla_fulfilled_status,
-                    "type": "line",
-                    "showDataPoints": True,
-                    "axis": "y2",
-                },
-            ],
+            [closed_status, open_status],
+            y2=sla_fulfilled_status,
+            seriesConfig={
+                sla_fulfilled_status: {"type": "line", "showDataPoints": True}
+            },
             stacked=True,
-            y2Axis={"title": "% SLA", "yMin": 0, "yMax": 100},
+            y2Axis={"title": "% SLA", "min": 0, "max": 100},
         )
 
     def get_feedback_trend_data(self):
         rating = "Rating"
         rated_tickets = "Rated Tickets"
 
-        base_cond = (self.ticket.creation > self.from_date) & (
-            self.ticket.creation < self.to_date_next
-        )
+        # Plot feedback against the resolution date so this trend matches the
+        # number-card average (get_avg_feedback_score), which also keys feedback
+        # off resolution_date rather than creation.
+        date_field = self.ticket.resolution_date
+
+        base_cond = (date_field > self.from_date) & (date_field < self.to_date_next)
         if self.combined_cond:
             base_cond = base_cond & self.combined_cond
 
         query = (
             frappe.qb.from_(self.ticket)
             .select(
-                Function("DATE", self.ticket.creation).as_("date"),
+                Function("DATE", date_field).as_("date"),
                 (
                     Avg(
                         Case()
@@ -338,8 +389,8 @@ class HelpdeskDashboard:
                 ).as_(rated_tickets),
             )
             .where(base_cond)
-            .groupby(Function("DATE", self.ticket.creation))
-            .orderby(Function("DATE", self.ticket.creation))
+            .groupby(Function("DATE", date_field))
+            .orderby(Function("DATE", date_field))
         )
 
         result = query.run(as_dict=True)
@@ -349,7 +400,7 @@ class HelpdeskDashboard:
             frappe.qb.from_(self.ticket)
             .select((Avg(self.ticket.feedback_rating) * 5).as_("avg_rating"))
             .where(
-                (self.ticket.creation.between(self.from_date, self.to_date_next))
+                (date_field.between(self.from_date, self.to_date_next))
                 & (self.ticket.feedback_rating > 0)
             )
         )
@@ -367,21 +418,18 @@ class HelpdeskDashboard:
 
         return get_bar_chart_config(
             result,
+            "feedback_trend",
             _("Feedback Trend"),
             subtitle,
-            {"key": "date", "type": "time", "title": "Date", "timeGrain": "day"},
+            "date",
+            {"type": "time", "title": "Date", "timeGrain": "day"},
             _("Rated Tickets"),
-            [
-                {"name": rated_tickets, "type": "bar"},
-                {
-                    "name": rating,
-                    "type": "line",
-                    "showDataPoints": True,
-                    "axis": "y2",
-                    "color": "#48BB74",
-                },
-            ],
-            y2Axis={"title": _("Rating"), "yMin": 0, "yMax": 5},
+            rated_tickets,
+            y2=rating,
+            seriesConfig={
+                rating: {"type": "line", "showDataPoints": True, "color": "#48BB74"}
+            },
+            y2Axis={"title": _("Rating"), "min": 0, "max": 5},
         )
 
     def get_avg_tickets_per_day(self):
@@ -444,6 +492,7 @@ def get_team_chart_data(
     if len(result) < 7:
         return get_pie_chart_config(
             result,
+            "tickets_by_team",
             _("Tickets by Team"),
             _("Percentage of total tickets by team"),
             "team",
@@ -452,11 +501,13 @@ def get_team_chart_data(
     else:
         return get_bar_chart_config(
             result,
+            "tickets_by_team",
             _("Tickets by Team"),
             _("Total tickets by team"),
-            {"key": "team", "type": "category", "title": "Team", "timeGrain": "day"},
+            "team",
+            {"type": "category", "title": "Team"},
             "Tickets",
-            [{"name": "count", "type": "bar"}],
+            "count",
         )
 
 
@@ -477,6 +528,7 @@ def get_ticket_type_chart_data(
     if len(result) < 7:
         return get_pie_chart_config(
             result,
+            "tickets_by_type",
             _("Tickets by Type"),
             _("Percentage of total tickets by type"),
             "type",
@@ -485,11 +537,13 @@ def get_ticket_type_chart_data(
     else:
         return get_bar_chart_config(
             result,
+            "tickets_by_type",
             _("Tickets by Type"),
             _("Total tickets by type"),
-            {"key": "type", "type": "category", "title": "Type", "timeGrain": "day"},
+            "type",
+            {"type": "category", "title": "Type"},
             "Tickets",
-            [{"name": "count", "type": "bar"}],
+            "count",
         )
 
 
@@ -510,6 +564,7 @@ def get_ticket_priority_chart_data(
     if len(result) < 7:
         return get_pie_chart_config(
             result,
+            "tickets_by_priority",
             _("Tickets by Priority"),
             _("Percentage of total tickets by priority"),
             "priority",
@@ -518,16 +573,13 @@ def get_ticket_priority_chart_data(
     else:
         return get_bar_chart_config(
             result,
+            "tickets_by_priority",
             _("Tickets by Priority"),
             _("Total tickets by priority"),
-            {
-                "key": "priority",
-                "type": "category",
-                "title": "Priority",
-                "timeGrain": "day",
-            },
+            "priority",
+            {"type": "category", "title": "Priority"},
             "Tickets",
-            [{"name": "count", "type": "bar"}],
+            "count",
         )
 
 
@@ -550,6 +602,7 @@ def get_ticket_channel_chart_data(
 
     return get_pie_chart_config(
         result,
+        "tickets_by_channel",
         _("Tickets by Channel"),
         _("Percentage of total tickets by channel"),
         "channel",
@@ -559,37 +612,60 @@ def get_ticket_channel_chart_data(
 
 def get_pie_chart_config(
     data: list[dict[str, any]],
+    key: str,
     title: str,
     subtitle: str,
     category_column: str,
     value_column: str,
 ) -> dict[str, any]:
     return {
-        "type": "pie",
+        "type": "donut",
         "data": data,
+        # stable identifier for the client, `title` is translated and cannot be matched on
+        "key": key,
         "title": title,
         "subtitle": subtitle,
-        "categoryColumn": category_column,
-        "valueColumn": value_column,
+        "category": category_column,
+        "value": value_column,
     }
 
 
 def get_bar_chart_config(
     data: list[dict[str, any]],
+    key: str,
     title: str,
     subtitle: str,
-    x_axis_config: dict[str, any],
+    x: str,
+    x_axis: dict[str, any],
     y_axis_title: str,
-    series: list,
+    y: str | list[str],
     **kwargs: dict[str, any],
 ) -> dict[str, any]:
-    return {
-        "type": "axis",
+    """frappe-ui BarChart props for a dashboard chart"""
+    chart = {
+        "type": "bar",
         "data": data,
+        # stable identifier for the client, `title` is translated and cannot be matched on
+        "key": key,
         "title": title,
         "subtitle": subtitle,
-        "xAxis": x_axis_config,
-        "yAxis": {"title": y_axis_title},
-        "series": series,
+        "x": x,
+        "y": y,
+        "xAxis": x_axis,
+        # ticket counts are whole numbers so keep the axis on whole steps
+        "yAxis": {"title": y_axis_title, "echartOptions": {"minInterval": 1}},
         **kwargs,
     }
+    if "y2Axis" in kwargs:
+        chart["yAxis"]["max"] = get_y_axis_max(data, y, kwargs.get("stacked"))
+    return chart
+
+
+def get_y_axis_max(data: list[dict[str, any]], y: str | list[str], stacked: bool):
+    """round the peak up to a multiple of 5 so the y2 axis gets clean steps"""
+    columns = [y] if isinstance(y, str) else y
+    combine = sum if stacked else max
+    peak = max(
+        (combine(row[column] or 0 for column in columns) for row in data), default=0
+    )
+    return max(5, math.ceil(peak / 5) * 5)

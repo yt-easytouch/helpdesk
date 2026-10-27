@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_bulk_edit": 1,
  "autoname": "hash",
  "creation": "2022-02-08 18:13:42.994713",
  "doctype": "DocType",
@@ -8,6 +9,7 @@
  "field_order": [
   "title",
   "status",
+  "visibility",
   "published_on",
   "views",
   "column_break_7",
@@ -15,7 +17,8 @@
   "author",
   "title_slug",
   "content_section",
-  "content"
+  "content",
+  "excerpt"
  ],
  "fields": [
   {
@@ -47,6 +50,13 @@
    "label": "Content"
   },
   {
+   "fieldname": "excerpt",
+   "fieldtype": "Small Text",
+   "hidden": 1,
+   "label": "Excerpt",
+   "read_only": 1
+  },
+  {
    "depends_on": "author",
    "fieldname": "author",
    "fieldtype": "Link",
@@ -74,6 +84,13 @@
    "options": "Published\nDraft\nArchived"
   },
   {
+   "default": "Customers",
+   "fieldname": "visibility",
+   "fieldtype": "Select",
+   "label": "Visibility",
+   "options": "Public\nCustomers\nPrivate"
+  },
+  {
    "fieldname": "title_slug",
    "fieldtype": "Data",
    "is_virtual": 1,
@@ -89,7 +106,7 @@
  ],
  "links": [],
  "make_attachments_public": 1,
- "modified": "2026-03-24 20:11:47.835393",
+ "modified": "2026-10-16 02:10:00.000000",
  "modified_by": "Administrator",
  "module": "Helpdesk",
  "name": "HD Article",
@@ -126,7 +143,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "All",
+   "role": "HD Customer",
    "share": 1
   },
   {
@@ -135,7 +152,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Guest",
+   "role": "HD Customer Manager",
    "share": 1
   }
  ],

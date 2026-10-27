@@ -1,43 +1,19 @@
 <template>
   <SettingsLayoutBase
     :description="__('Configure your Exotel settings for Helpdesk.')"
+    :back-label="__('Exotel')"
+    :on-back="goBack"
+    :dirty="isDirty.exotel"
   >
-    <template #title>
-      <div class="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          icon-left="chevron-left"
-          :label="__('Exotel')"
-          size="md"
-          @click="goBack"
-          class="cursor-pointer hover:bg-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:none active:bg-transparent active:outline-none active:ring-0 active:ring-offset-0 active:text-ink-gray-5 font-semibold text-ink-gray-7 text-lg hover:opacity-70 !pr-0 !pl-0 -ml-1.5"
-        />
-        <Badge
-          :class="[
-            isDirty.twilio || isDirty.exotel || isDirty.telephonyAgent
-              ? 'opacity-100'
-              : 'opacity-0',
-          ]"
-          :label="__('Unsaved')"
-          theme="orange"
-          variant="subtle"
-        />
-      </div>
-    </template>
     <template #header-actions>
       <Button
         :label="__('Save')"
         theme="gray"
         variant="solid"
         @click="save"
-        :disabled="
-          !isDirty.twilio && !isDirty.exotel && !isDirty.telephonyAgent
-        "
-        :loading="
-          twilio.save.loading ||
-          exotel.save.loading ||
-          telephonyAgent.save.loading
-        "
+        v-if="isDirty.exotel"
+        :disabled="!isDirty.exotel"
+        :loading="exotel.save.loading"
       />
     </template>
     <template #content>
@@ -152,7 +128,7 @@ import {
   ErrorMessage,
   createResource,
 } from "frappe-ui";
-import { nextTick, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import { isDocDirty, validateExotel, validateTwilio } from "./utils";
 import { useAuthStore } from "@/stores/auth";
 import { useTelephonyStore } from "@/stores/telephony";
@@ -216,13 +192,6 @@ const telephonyAgent = createDocumentResource({
   auto: false,
   onError(er) {
     toast.error(er?.messages?.[0] || __("Failed to load telephony agent"));
-  },
-});
-
-const twilioAppsResource = createResource({
-  url: "telephony.twilio.api.fetch_applications",
-  onSuccess() {
-    twilio.reload();
   },
 });
 
@@ -308,16 +277,6 @@ async function save() {
   // Reload twilio to prevent "doc has been modified" error, as an application is created and doc is updated on save
   await twilio.reload();
   telephonyStore.fetchCallIntegrationStatus();
-}
-
-function refreshApps(togglePopover) {
-  twilioAppsResource.submit().then(() => {
-    // Close and reopen popover to fix bug where search does not work after refreshing list
-    togglePopover();
-    nextTick(() => {
-      togglePopover();
-    });
-  });
 }
 
 createResource({

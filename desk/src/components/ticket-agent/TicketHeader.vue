@@ -1,17 +1,16 @@
 <template>
   <LayoutHeader>
     <template #left-header>
-      <div class="flex flex-col truncate">
-        <Breadcrumbs :items="breadcrumbs" class="breadcrumbs -ml-0.5">
+      <div class="flex max-w-[60%] flex-col truncate">
+        <Breadcrumbs :items="breadcrumbs" class="breadcrumbs -ms-0.5">
           <template #prefix="{ item }">
             <Icon
               v-if="item.icon"
               :icon="item.icon"
-              class="mr-1 h-4 flex items-center justify-center self-center"
+              class="me-1 h-4 flex items-center justify-center self-center"
             />
           </template>
         </Breadcrumbs>
-        <TicketSLA />
       </div>
     </template>
     <template #right-header>
@@ -21,23 +20,21 @@
           size="md"
           :hide-name="true"
         />
-        <!-- Navigation -->
-        <TicketNavigation :key="ticket?.name" />
         <!-- Custom Actions -->
         <div v-if="normalActions.length" class="flex gap-2">
           <Button v-for="action in normalActions" v-bind="action">
             <template v-if="action.icon" #prefix>
-              <FeatherIcon :name="action.icon" class="h-4 w-4" />
+              <Icon :icon="action.icon" class="h-4 w-4" />
             </template>
           </Button>
         </div>
         <div v-if="groupedWithLabelActions.length">
           <div v-for="g in groupedWithLabelActions" :key="g.label">
             <Dropdown v-slot="{ open }" :options="g.action">
-              <Button :label="g.label">
+              <Button :label="__(g.label)">
                 <template #suffix>
-                  <FeatherIcon
-                    :name="open ? 'chevron-up' : 'chevron-down'"
+                  <component
+                    :is="open ? LucideChevronUp : LucideChevronDown"
                     class="h-4"
                   />
                 </template>
@@ -46,9 +43,9 @@
           </div>
         </div>
         <!-- Status -->
-        <Dropdown :options="statusDropdown" placement="right">
+        <Dropdown :options="statusDropdown" align="end">
           <template #default="{ open }">
-            <Button :label="ticket.doc.status" ref="statusRef">
+            <Button :label="__(ticket.doc.status)" ref="statusRef">
               <template #prefix>
                 <IndicatorIcon
                   :class="
@@ -61,11 +58,14 @@
         </Dropdown>
         <!-- Core Actions + Custom Actions -->
         <Dropdown
-          v-if="groupedActions[0]?.items?.length >= 1"
+          v-if="groupedActions.length"
           :options="groupedActions"
-          placement="right"
+          align="end"
         >
-          <Button icon="more-horizontal" />
+          <Button
+            icon="lucide-more-horizontal"
+            :aria-label="__('More actions')"
+          />
         </Dropdown>
       </div>
     </template>
@@ -80,23 +80,23 @@
 </template>
 
 <script setup lang="ts">
+import LucideChevronUp from "~icons/lucide/chevron-up";
+import LucideChevronDown from "~icons/lucide/chevron-down";
+import Icon from "@helpdesk/shared/Icon.vue";
 import { MultipleAvatar } from "@/components";
 import LayoutHeader from "@/components/LayoutHeader.vue";
 import TicketMergeModal from "@/components/ticket/TicketMergeModal.vue";
-import { setupCustomizations } from "@/composables/formCustomisation";
+import { showMergeModal } from "@/pages/ticket/modalStates";
+import { setupCustomizations } from "@helpdesk/shared/formScripts";
 import { useNotifyTicketUpdate } from "@/composables/realtime";
-import { useShortcut } from "@/composables/shortcuts";
+import { useShortcut } from "@helpdesk/shared/shortcuts";
+import { reloadTicketFeed } from "@/composables/useTicket";
 import { useView } from "@/composables/useView";
 import { useAuthStore } from "@/stores/auth";
 import { globalStore } from "@/stores/globalStore";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation";
-import {
-  ActivitiesSymbol,
-  CustomizationSymbol,
-  TicketSymbol,
-  View,
-} from "@/types";
+import { CustomizationSymbol, TicketSymbol, View } from "@/types";
 import { HDTicketStatus } from "@/types/doctypes";
 import { getIcon } from "@/utils";
 import {
@@ -121,8 +121,6 @@ import {
 import { useRoute, useRouter } from "vue-router";
 import LucideMerge from "~icons/lucide/merge";
 import { IndicatorIcon } from "../icons";
-import TicketNavigation from "./TicketNavigation.vue";
-import TicketSLA from "./TicketSLA.vue";
 import TicketSubjectModal from "./TicketSubjectModal.vue";
 const { isAdmin } = useAuthStore();
 const { $dialog } = globalStore();
@@ -139,9 +137,8 @@ const router = useRouter();
 const { findView } = useView("HD Ticket");
 const ticketStatusStore = useTicketStatusStore();
 
-const ticket = inject(TicketSymbol);
-const customizations = inject(CustomizationSymbol);
-const activities = inject(ActivitiesSymbol);
+const ticket = inject(TicketSymbol)!;
+const customizations = inject(CustomizationSymbol)!;
 const showSubjectDialog = ref(false);
 
 const { notifyTicketUpdate } = useNotifyTicketUpdate(ticket.value?.name);
@@ -149,18 +146,14 @@ const statusDropdown = computed(() => {
   const statuses =
     ticketStatusStore.statuses.data?.filter((s) => s.enabled) || [];
   return statuses.map((o: HDTicketStatus) => ({
-    label: o.label_agent,
+    label: __(o.label_agent),
     value: o.label_agent,
     onClick: () => {
       notifyTicketUpdate("Status", o.label_agent);
       if (ticket.value.doc.status === o.label_agent) return;
       ticket.value.setValue.submit(
         { status: o.label_agent },
-        {
-          onSuccess() {
-            activities.value.reload();
-          },
-        }
+        { onSuccess: () => reloadTicketFeed(ticket.value.name) }
       );
     },
     icon: () =>
@@ -175,7 +168,7 @@ const breadcrumbs = computed(() => {
     const currView: ComputedRef<View> = findView(route.query.view as string);
     if (currView) {
       items.push({
-        label: currView.value?.label,
+        label: __(currView.value?.label),
         icon: getIcon(currView.value?.icon),
         route: { name: "TicketsAgent", query: { view: currView.value?.name } },
       });
@@ -208,11 +201,10 @@ function handleDeleteTicket() {
       {
         label: __("Delete"),
         theme: "red",
-        iconLeft: "trash-2",
+        iconLeft: "lucide-trash-2",
         variant: "solid",
         onClick({ close }) {
-          call("frappe.client.delete", {
-            doctype: "HD Ticket",
+          call("helpdesk.api.ticket.delete_ticket", {
             name: ticket?.value?.doc.name,
           })
             .then(() => {
@@ -240,7 +232,6 @@ const ticketCount = createResource({
   }),
   auto: true,
 });
-const showMergeModal = ref(false);
 const showMergeOption = computed(() => {
   return (
     !ticket?.value?.doc?.is_merged &&
@@ -264,7 +255,7 @@ const defaultActions = computed(() => {
     {
       group: __("Default actions"),
       hideLabel: true,
-      items,
+      options: items,
     },
   ];
 });
@@ -275,17 +266,12 @@ const deleteAction = computed(() => {
     {
       group: __("Default actions"),
       hideLabel: true,
-      items: [
+      options: [
         {
           label: __("Delete"),
-          component: h(Button, {
-            label: __("Delete"),
-            variant: "ghost",
-            iconLeft: "trash-2",
-            theme: "red",
-            style: "width: 100%; justify-content: flex-start;",
-            onClick: handleDeleteTicket,
-          }),
+          icon: "lucide-trash-2",
+          theme: "red",
+          onClick: handleDeleteTicket,
         },
       ],
     },
@@ -310,7 +296,7 @@ const groupedWithLabelActions = computed(() => {
         _actions[groupIndex].action.push(action);
       } else {
         _actions.push({
-          label: action.buttonLabel,
+          label: __(action.buttonLabel),
           action: [action],
         });
       }
@@ -322,20 +308,20 @@ const groupedActions = computed(() => {
   let _actions = [];
   _actions = _actions.concat(defaultActions.value);
   _actions = _actions.concat(
-    actions.value.filter((action) => action.group && !action.buttonLabel)
+    actions.value.filter((action) => action.group && !__(action.buttonLabel))
   );
   _actions = _actions.concat(deleteAction.value);
-  return _actions;
+  // Drop empty groups so the kebab hides when there is nothing to show. Form
+  // script actions are flat rows with no `options`, so they must survive.
+  return _actions.filter((action) => !action.options || action.options.length);
 });
 
 const customizationCtx = computed(() => ({
   doc: ticket?.value?.doc,
   call,
   router,
-  toast,
   $dialog: globalStore().$dialog,
   updateField,
-  createToast: toast.create,
 }));
 
 // to manage the correct  customization context for actions, happens because of navigation between tickets using buttons
@@ -354,7 +340,7 @@ const statusRef = useTemplateRef("statusRef");
 
 onMounted(() => {
   useShortcut("s", () => {
-    statusRef.value?.$el?.nextElementSibling?.click();
+    statusRef.value?.$el?.click();
   });
 });
 </script>

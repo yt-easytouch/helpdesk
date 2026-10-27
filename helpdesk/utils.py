@@ -8,14 +8,15 @@ from bs4 import BeautifulSoup
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder import Order
-from frappe.realtime import get_website_room
+from frappe.realtime import get_site_room
 from frappe.utils import floor
 from frappe.utils.safe_exec import get_safe_globals
 from frappe.utils.telemetry import capture as _capture
 from phonenumbers import NumberParseException
 from phonenumbers import PhoneNumberFormat as PNF
-from pypika import Criterion
 from pypika.functions import Replace
+
+CUSTOMER_PORTAL_ROOT = "/help"
 
 
 def check_permissions(doctype, parent, doc=None):
@@ -44,7 +45,7 @@ def is_admin(user: str = None) -> bool:
     return user == "Administrator"
 
 
-def is_agent(user: str = None) -> bool:
+def is_agent(user: str | None = None) -> bool:
     """
     Check whether `user` is an agent
 
@@ -52,12 +53,28 @@ def is_agent(user: str = None) -> bool:
     :return: Whether `user` is an agent
     """
     user = user or frappe.session.user
-    return (
-        is_admin()
-        or "Agent Manager" in frappe.get_roles(user)
-        or "Agent" in frappe.get_roles(user)
-        or bool(frappe.db.exists("HD Agent", {"name": user}))
-    )
+    if is_admin(user):
+        return True
+    # a deactivated agent keeps their roles; the record decides when there is one
+    active = frappe.db.get_value("HD Agent", user, "is_active")
+    if active is not None:
+        return bool(active)
+    roles = frappe.get_roles(user)
+    return "Agent Manager" in roles or "Agent" in roles
+
+
+def get_agent_name(user: str = None) -> str | None:
+    """
+    Get the HD Agent name for `user`
+
+    The HD Agent's name is the user (see HD Agent controller), so this
+    returns the user when an agent record exists, else None.
+
+    :param user: User to check against, defaults to current user
+    :return: HD Agent name, or None if `user` is not an agent
+    """
+    user = user or frappe.session.user
+    return user if frappe.db.exists("HD Agent", user) else None
 
 
 def publish_event(
@@ -67,13 +84,14 @@ def publish_event(
     user: str | None = None,
 ):
     """
-    Publish `event` to a room with `data`
+    Publish `event` to a room with `data`; without a room, to desk users only
+    (the website room reaches guests, and events can name agents).
 
     :param event: Event name. Example: "refetch_resource"
     :param data: Data to be sent with the event
     :param user: User to send the event to, defaults to current user
     """
-    room = room or get_website_room()
+    room = room or get_site_room()
     user = user or frappe.session.user
     frappe.publish_realtime(
         event, message=data, room=room, after_commit=True, user=user
@@ -88,30 +106,39 @@ def capture_event(event: str):
     return _capture(event, "helpdesk")
 
 
-def get_customer(contact: str) -> tuple[str]:
+def get_user_contact(user: str | None = None) -> str | None:
+    return frappe.db.get_value("Contact", {"user": user or frappe.session.user})
+
+
+def get_customers(user: str = "", contact: str = "", get_roles=False):
     """
     Get `Customer` from `Contact`
 
     :param contact: Contact which belongs to a customer
+    :param user: User to check against, defaults to current user
     :return: Customer `name` if available
     """
-    QBDynamicLink = frappe.qb.DocType("Dynamic Link")
-    QBContact = frappe.qb.DocType("Contact")
-    conditions = [QBDynamicLink.parent == contact, QBContact.email_id == contact]
-    return [
-        i[0]
-        for i in (
-            frappe.qb.from_(QBDynamicLink)
-            .select(QBDynamicLink.link_name)
-            .where(QBDynamicLink.parentfield == "links")
-            .where(QBDynamicLink.parenttype == "Contact")
-            .where(QBDynamicLink.link_doctype == "HD Customer")
-            .join(QBContact)
-            .on(QBDynamicLink.parent == QBContact.name)
-            .where(Criterion.any(conditions))
-            .run()
-        )
-    ]
+    if not contact:
+        contact = get_user_contact(user)
+
+    HDCustomer = frappe.qb.DocType("HD Customer")
+    HDCustomerMember = frappe.qb.DocType("HD Customer Member")
+
+    query = (
+        frappe.qb.from_(HDCustomerMember)
+        .where(HDCustomerMember.contact_name == contact)
+        .join(HDCustomer)
+        .on(HDCustomer.name == HDCustomerMember.parent)
+        .select(HDCustomer.name, HDCustomerMember.is_manager)
+        .distinct()
+    ).run(as_dict=True)
+    customers = [d.get("name") for d in query]
+    if get_roles:
+        customers = [
+            {"name": d.get("name"), "is_manager": d.get("is_manager")} for d in query
+        ]
+
+    return tuple(customers)
 
 
 def extract_mentions(html):
@@ -174,16 +201,54 @@ def agent_only(fn):
     return wrapper
 
 
-def get_agents_team():
-    QBTeam = frappe.qb.DocType("HD Team")
-    QBTeamMember = frappe.qb.DocType("HD Team Member")
+def is_agent_manager(user: str | None = None) -> bool:
+    """
+    Check whether `user` may manage other agents
+
+    :param user: User to check against, defaults to current user
+    :return: Whether `user` is an agent manager, system manager or admin
+    """
+    user = user or frappe.session.user
+    # as in is_agent: Administrator is never restricted
+    if is_admin(user):
+        return True
+    # a deactivated agent keeps their roles
+    if frappe.db.get_value("HD Agent", user, "is_active") == 0:
+        return False
+    roles = set(frappe.get_roles(user))
+    return bool(roles & {"Administrator", "System Manager", "Agent Manager"})
+
+
+def agent_manager_only(fn):
+    """Decorator to validate if user is an agent manager."""
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not is_agent_manager():
+            frappe.throw(
+                msg=_("You are not permitted to access this resource."),
+                title=_("Not Allowed"),
+                exc=frappe.PermissionError,
+            )
+
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def get_agents_team(user: str | None = None):
+    """Teams the user belongs to. Defaults to the session user."""
+    user = user or frappe.session.user
+    Team = frappe.qb.DocType("HD Team")
+    TeamMember = frappe.qb.DocType("HD Team Member")
 
     teams = (
-        frappe.qb.from_(QBTeamMember)
-        .where(QBTeamMember.user == frappe.session.user)
-        .join(QBTeam)
-        .on(QBTeam.name == QBTeamMember.parent)
-        .select(QBTeam.team_name, QBTeam.ignore_restrictions)
+        frappe.qb.from_(TeamMember)
+        .join(Team)
+        .on(Team.name == TeamMember.parent)
+        .where(TeamMember.user == user)
+        .where(Team.disabled == 0)
+        .select(Team.team_name, Team.ignore_restrictions)
         .run(as_dict=True)
     )
     return teams
@@ -200,7 +265,13 @@ contact_default_columns = [
         "label": "Email",
         "type": "Data",
         "key": "email_id",
-        "width": "24rem",
+        "width": "17rem",
+    },
+    {
+        "label": "Mobile",
+        "type": "Data",
+        "key": "mobile_no",
+        "width": "12rem",
     },
     {
         "label": "Created On",
@@ -209,6 +280,8 @@ contact_default_columns = [
         "width": "8rem",
     },
 ]
+
+contact_default_rows = ["name", "email_id", "mobile_no", "image", "creation"]
 
 call_log_default_columns = [
     {
@@ -471,3 +544,10 @@ def format_time_difference(dt, context="ago"):
         return f"{int(total_seconds // 3600)}h"
     else:
         return f"{int(total_seconds // 86400)}d"
+
+
+def get_country_from_timezone(time_zone: str):
+    country = frappe.db.get_value(
+        "Country", {"time_zones": ["like", f"%{time_zone}%"]}, "name"
+    )
+    return country or None

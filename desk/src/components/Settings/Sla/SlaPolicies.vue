@@ -1,7 +1,7 @@
 <template>
   <SettingsLayoutBase>
     <template #title>
-      <h1 class="text-lg font-semibold text-ink-gray-8">
+      <h1 class="text-md-semibold text-ink-gray-8">
         {{ __("Service Level Agreements (SLAs)") }}
       </h1>
     </template>
@@ -26,7 +26,8 @@
         theme="gray"
         variant="solid"
         @click="goToNew()"
-        icon-left="plus"
+        icon-left="lucide-plus"
+        class="rtl:flex-row-reverse"
       />
     </template>
     <template
@@ -34,22 +35,24 @@
       #header-bottom
     >
       <div class="relative">
-        <Input
+        <TextInput
           :model-value="slaSearchQuery"
-          @input="slaSearchQuery = $event"
+          @update:model-value="slaSearchQuery = $event"
           :placeholder="__('Search')"
           type="text"
-          class="bg-white hover:bg-white focus:ring-0 border-outline-gray-2"
-          icon-left="search"
-          debounce="300"
-          inputClass="p-4 pr-12"
-        />
+          class="focus:ring-0 border-outline-gray-2"
+          :debounce="300"
+        >
+          <template #prefix>
+            <LucideSearch class="size-4" />
+          </template>
+        </TextInput>
         <Button
           v-if="slaSearchQuery"
-          icon="x"
+          icon="lucide-x"
           variant="ghost"
           @click="slaSearchQuery = ''"
-          class="absolute right-1 top-1/2 -translate-y-1/2"
+          class="absolute end-1 top-1/2 -translate-y-1/2"
         />
       </div>
     </template>
@@ -83,10 +86,8 @@ watch(slaSearchQuery, (newValue) => {
   slaPolicyList.filters = {
     name: ["like", `%${newValue}%`],
   };
-  if (!newValue) {
-    slaPolicyList.start = 0;
-    slaPolicyList.pageLength = 10;
-  }
+  // no pager on this list, so a shrunken pageLength would hide the rest for good
+  if (!newValue) slaPolicyList.start = 0;
   slaPolicyList.reload();
 });
 </script>

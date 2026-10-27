@@ -27,17 +27,17 @@
             <!-- email service provider info -->
             <div>
               <div
-                class="flex items-center gap-2 rounded-md p-2 ring-1 ring-gray-200"
+                class="flex items-center gap-2 rounded-5 p-2 ring-1 ring-outline-elevation-2"
               >
                 <CircleAlert
-                  class="h-6 w-5 w-min-5 w-max-5 min-h-5 max-w-5 text-blue-500"
+                  class="h-6 w-5 w-min-5 w-max-5 min-h-5 max-w-5 text-ink-blue-5"
                 />
-                <div class="text-wrap text-xs text-gray-700">
+                <div class="text-wrap text-xs text-ink-gray-7">
                   {{ selectedService.info }}
                   <a
                     :href="selectedService.link"
                     target="_blank"
-                    class="text-blue-500 underline"
+                    class="text-ink-blue-5 underline"
                     >here</a
                   >.
                 </div>
@@ -129,10 +129,12 @@
                     :name="field.name"
                     :type="field.type"
                   />
-                  <p class="text-gray-500 text-p-sm">{{ field.description }}</p>
+                  <p class="text-ink-gray-4 text-p-sm">
+                    {{ field.description }}
+                  </p>
                 </div>
               </div>
-              <ErrorMessage v-if="error" class="ml-1" :message="error" />
+              <ErrorMessage v-if="error" class="ms-1" :message="error" />
             </div>
           </div>
         </div>
@@ -165,7 +167,7 @@ import { capture } from "@/telemetry";
 import { __ } from "@/translation";
 import { EmailAccount, EmailService, EmailStep } from "@/types";
 import { call, createResource, toast } from "frappe-ui";
-import { useOnboarding } from "frappe-ui/frappe";
+import { useOnboarding } from "@framework/ui";
 import { computed, reactive, Ref, ref, watch } from "vue";
 import CircleAlert from "~icons/lucide/circle-alert";
 import {
@@ -220,7 +222,7 @@ interface E {
 
 const emit = defineEmits<E>();
 
-const { updateOnboardingStep } = useOnboarding("helpdesk");
+const { updateOnboardingStep } = useOnboarding("helpdesk") ?? {};
 
 const state = reactive<EmailAccountProviderAuthState>({
   service: "",
@@ -306,7 +308,7 @@ const addEmailRes = createResource({
   onSuccess: () => {
     toast.success(__("Email account created"));
     emit("update:step", "email-list");
-    updateOnboardingStep("setup_email_account");
+    updateOnboardingStep?.("setup_email_account");
     capture("email_account_created", { data: { service: state.service } });
   },
   onError: () => {

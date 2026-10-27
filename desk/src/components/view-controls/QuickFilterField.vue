@@ -11,24 +11,25 @@
     v-else-if="filter.type === 'Select'"
     class="form-control cursor-pointer [&_select]:cursor-pointer !min-w-36 max-w-36"
     type="select"
-    :model-value="props.value"
+    :model-value="props.value || undefined"
     :options="filter.options"
     :placeholder="filter.label"
-    @change.stop="updateFilter(filter, $event.target.value)"
+    @update:modelValue="(v) => updateFilter(filter, v || '')"
   />
   <Link
     v-else-if="filter.type === 'Link'"
-    :value="props.value"
+    :model-value="props.value"
     :doctype="filter.options"
     :placeholder="filter.label"
-    @change="(data) => updateFilter(filter, data)"
+    :title="props.value ? String(props.value) : undefined"
     class="!min-w-36 max-w-36"
+    @update:model-value="(value) => updateFilter(filter, value ?? '')"
   />
   <component
     v-else-if="['Date', 'Datetime'].includes(filter.type)"
     class="border-none !min-w-36 max-w-36"
     :is="filter.type === 'Date' ? DatePicker : DateTimePicker"
-    :value="props.value"
+    :model-value="props.value"
     @change="(v) => updateFilter(filter, v)"
     :placeholder="filter.label"
   />
@@ -42,7 +43,7 @@
   />
 </template>
 <script setup>
-import { Link } from "@/components";
+import { Link } from "@framework/ui";
 import { useDebounceFn } from "@vueuse/core";
 import { DatePicker, DateTimePicker, FormControl, TextInput } from "frappe-ui";
 

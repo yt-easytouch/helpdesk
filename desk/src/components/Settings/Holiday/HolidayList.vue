@@ -1,11 +1,11 @@
 <template>
   <div
     v-if="holidayList.list.loading && !holidayList.list.data"
-    class="flex items-center justify-center mt-12"
+    class="flex items-center justify-center absolute inset-x-0 top-5.5 bottom-0"
   >
     <LoadingIndicator class="w-4" />
   </div>
-  <div v-else class="-ml-2 grow">
+  <div v-else class="-ms-2 grow">
     <div
       v-if="!holidayList.list.loading && !holidayList.list.data?.length"
       class="flex flex-col items-center justify-center gap-4 h-full"
@@ -16,7 +16,7 @@
         <Briefcase class="size-6 text-ink-gray-6" />
       </div>
       <div class="flex flex-col items-center gap-1">
-        <div class="text-base font-medium text-ink-gray-6">
+        <div class="text-base-medium text-ink-gray-6">
           {{ __("No Holiday list found") }}
         </div>
         <div class="text-p-sm text-ink-gray-5 max-w-60 text-center">
@@ -25,8 +25,8 @@
       </div>
     </div>
     <div v-else>
-      <div class="flex text-sm text-gray-600">
-        <div class="ml-2">{{ __("Schedule name") }}</div>
+      <div class="flex text-sm text-ink-gray-5">
+        <div class="ms-2">{{ __("Schedule name") }}</div>
       </div>
       <hr class="mx-2 mt-2" />
       <div>

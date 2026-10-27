@@ -12,26 +12,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, type PropType } from "vue";
-import CardBase from "./CardBase.vue";
-import { createResource } from "frappe-ui";
 import { __ } from "@/translation";
+import type { LineChart } from "@/types";
+import { buildPercentageChange } from "@/utils";
 import { EChartsOption } from "echarts";
-
-interface Data {
-  percentage_change: number;
-  total: number;
-  data: { date: string; count: number }[];
-}
+import { createResource } from "frappe-ui";
+import { computed, onMounted, ref, type PropType } from "vue";
+import CardBase from "../../../components/ChartCardBase.vue";
 
 const props = defineProps({
   data: {
-    type: Object as PropType<Data>,
+    type: Object as PropType<LineChart>,
     required: true,
   },
 });
 
-const currentDuration = ref(__("Last month"));
+// the untranslated key: it is lowercased straight into the API period
+const currentDuration = ref("Last month");
 
 const chartColor = {
   lineColor: "#5597F3",
@@ -39,7 +36,7 @@ const chartColor = {
 };
 
 const chartData = computed(() => {
-  const _data: Data = getAgentTicketsResource.fetched
+  const _data: LineChart = getAgentTicketsResource.fetched
     ? getAgentTicketsResource.data
     : props.data;
 
@@ -48,11 +45,7 @@ const chartData = computed(() => {
   const dates = _data?.data?.map((item) => item.date) || [];
   const counts = _data?.data?.map((item) => item.count) || [];
 
-  const percentageChange = {
-    icon: _percentageChange > 0 ? "arrow-up-right" : "arrow-down-left",
-    value: _percentageChange > 0 ? `+${_percentageChange}` : _percentageChange,
-    color: _percentageChange > 0 ? "text-red-600" : "text-green-600",
-  };
+  const percentageChange = buildPercentageChange(_percentageChange);
 
   return {
     data: counts,

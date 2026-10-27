@@ -1,63 +1,66 @@
 <template>
-  <div class="flex flex-col rounded-md p-4 grow w-full h-full overflow-hidden">
+  <div class="flex flex-col rounded-5 p-4 grow w-full h-full overflow-hidden">
     <div class="flex gap-4 items-center justify-between">
-      <div
-        class="flex items-center gap-2 text-lg font-semibold text-ink-gray-8"
-      >
+      <div class="flex items-center gap-2 text-md-semibold text-ink-gray-8">
         {{ currentTitle }}
-        <Tooltip :text="tooltipText" placement="top">
-          <FeatherIcon name="info" class="size-3" />
+        <Tooltip :text="tooltipText" side="top">
+          <LucideInfo class="size-3" />
         </Tooltip>
       </div>
       <div class="w-max">
-        <TabButtons :buttons="chartTabs" v-model="currentTab" />
+        <TabButtons :options="chartTabs" v-model="currentTab" />
       </div>
     </div>
     <div class="flex flex-col mt-5 grow overflow-auto hide-scrollbar">
-      <table class="w-full table-auto">
-        <thead v-if="chartConfig?.tickets?.length > 0">
-          <tr class="text-sm text-gray-600">
-            <th class="p-2 text-left font-normal whitespace-nowrap">
+      <table
+        class="w-full table-auto transition-opacity duration-150"
+        :class="{
+          'opacity-60': getPendingTicketsResource.loading && !showSkeleton,
+        }"
+      >
+        <thead v-if="!showSkeleton && chartConfig?.tickets?.length > 0">
+          <tr class="text-sm text-ink-gray-5">
+            <th class="p-2 text-start font-normal whitespace-nowrap">
               {{ __("ID") }}
             </th>
-            <th class="p-2 text-left font-normal w-full">
+            <th class="p-2 text-start font-normal w-full">
               {{ __("Subject") }}
             </th>
-            <th class="p-2 text-left font-normal min-w-20 whitespace-nowrap">
+            <th class="p-2 text-start font-normal min-w-16 whitespace-nowrap">
               {{ __("Status") }}
             </th>
-            <th class="p-2 text-left font-normal min-w-20 whitespace-nowrap">
+            <th class="p-2 text-start font-normal min-w-28 whitespace-nowrap">
               {{ __("Priority") }}
             </th>
-            <th class="p-2 text-left font-normal min-w-32 whitespace-nowrap">
+            <th class="p-2 text-start font-normal min-w-44 whitespace-nowrap">
               {{ __("Team") }}
             </th>
-            <th class="p-2 text-left font-normal min-w-40 whitespace-nowrap">
+            <th class="p-2 text-start font-normal min-w-40 whitespace-nowrap">
               {{ __("Reason") }}
             </th>
           </tr>
         </thead>
-        <tbody v-if="chartConfig?.tickets?.length > 0" class="grow">
+        <tbody
+          v-if="!showSkeleton && chartConfig?.tickets?.length > 0"
+          class="grow"
+        >
           <tr
             v-for="ticket in chartConfig?.tickets"
             :key="ticket.name"
             @click="goToTicket(ticket)"
-            class="text-sm cursor-pointer hover:bg-gray-50 border-t border-gray-200"
+            class="text-sm cursor-pointer hover:bg-surface-sidebar border-t border-outline-elevation-2"
           >
             <td class="p-2 py-3 whitespace-nowrap">{{ ticket.name }}</td>
             <td class="p-2 py-3 w-full max-w-0 truncate">
               {{ ticket.subject }}
             </td>
-            <td class="p-2 py-3 min-w-20 truncate">
+            <td class="p-2 py-3 min-w-16 truncate">
               {{ ticket.status }}
             </td>
-            <td class="p-2 py-3 min-w-20 truncate">
-              <Badge
-                :label="ticket.priority"
-                :theme="getPriorityBadgeColor(ticket.priority_integer_value)"
-              />
+            <td class="p-2 py-3 min-w-28 truncate">
+              <TicketPriority :priority="ticket.priority" />
             </td>
-            <td class="p-2 py-3 min-w-36 truncate">
+            <td class="p-2 py-3 min-w-44 truncate">
               {{ ticket.agent_group || __("Not Assigned") }}
             </td>
             <td class="p-2 py-3 min-w-40">
@@ -78,7 +81,7 @@
                   v-else-if="ticket.reason.type === 'pending'"
                   class="size-4 flex-shrink-0"
                 />
-                <span class="truncate">{{ ticket.reason.text }}</span>
+                <span class="truncate pe-2">{{ ticket.reason.text }}</span>
               </div>
               <span
                 v-else
@@ -87,72 +90,89 @@
               >
             </td>
           </tr>
-          <tr
-            v-if="chartConfig?.tickets?.length < 6"
-            v-for="i in Math.max(0, 7 - chartConfig?.tickets?.length)"
-            :key="'placeholder-' + i"
-            class="border-t border-gray-100"
-          >
-            <td v-for="j in 6" :key="j" class="p-2 py-3">
-              <div class="h-5 w-full bg-surface-gray-1" />
-            </td>
-          </tr>
         </tbody>
         <tbody class="relative" v-else>
           <tr
             v-for="i in 8"
             :key="i"
-            :class="i > 1 ? 'border-t border-gray-200' : ''"
+            :class="i > 1 ? 'border-t border-outline-elevation-2' : ''"
           >
             <td class="p-2 py-3 min-w-8">
-              <div class="h-4 w-full bg-surface-gray-1" />
+              <div class="h-4 w-full rounded-1 bg-surface-gray-1" />
             </td>
             <td class="p-2 py-3 w-full max-w-0">
-              <div class="h-4 w-full bg-surface-gray-1 max-w-full" />
+              <div class="h-4 w-full rounded-1 bg-surface-gray-1 max-w-full" />
             </td>
             <td class="p-2 py-3 min-w-14">
-              <div class="h-4 w-full bg-surface-gray-1" />
+              <div class="h-4 w-full rounded-1 bg-surface-gray-1" />
             </td>
             <td class="p-2 py-3 min-w-21">
-              <div class="h-4 w-full bg-surface-gray-1" />
+              <div class="h-4 w-full rounded-1 bg-surface-gray-1" />
             </td>
             <td class="p-2 py-3 min-w-28">
-              <div class="h-4 w-full bg-surface-gray-1" />
+              <div class="h-4 w-full rounded-1 bg-surface-gray-1" />
             </td>
             <td class="p-2 py-3 min-w-40">
-              <div class="h-4 w-full bg-surface-gray-1" />
+              <div class="h-4 w-full rounded-1 bg-surface-gray-1" />
             </td>
           </tr>
-          <TableEmptyState
-            v-if="chartConfig?.tickets?.length === 0"
+          <EmptyState
+            class="absolute inset-0 z-10"
+            v-if="
+              !getPendingTicketsResource.loading &&
+              chartConfig?.tickets?.length === 0
+            "
             :title="emptyState.title"
             :description="emptyState.description"
+            variant="overlay"
+            text="md"
           />
         </tbody>
       </table>
       <div
-        v-if="chartConfig?.totalPendingTickets > 6"
-        class="p-2 flex items-center gap-1 text-base text-ink-gray-5 cursor-pointer hover:text-ink-gray-7 w-max select-none mt-3"
-        @click="redirectToSeeAllTickets"
+        class="flex justify-between items-center text-sm mt-auto text-ink-gray-5 ps-2 pb-2"
       >
-        {{ __("See all {0} tickets", chartConfig?.totalPendingTickets + "") }}
-        <FeatherIcon name="arrow-right" class="size-4" />
+        <div>
+          <div
+            v-if="chartConfig?.totalPendingTickets > 6"
+            class="flex items-center gap-1 cursor-pointer hover:text-ink-gray-7 w-max select-none mt-3"
+            @click="redirectToSeeAllTickets"
+          >
+            {{
+              __("See all {0} tickets", chartConfig?.totalPendingTickets + "")
+            }}
+            <LucideArrowRight class="size-4 rtl:rotate-180" />
+          </div>
+        </div>
+        <div v-if="chartConfig?.tickets?.length > 0" class="mt-3 mb-0.5">
+          {{
+            __(
+              "Showing {0} of {1} {2}",
+              chartConfig?.tickets?.length + "",
+              chartConfig?.totalPendingTickets + "",
+              chartConfig?.tickets?.length > 1 ? __("tickets") : __("ticket")
+            )
+          }}
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import LucideArrowRight from "~icons/lucide/arrow-right";
+import LucideInfo from "~icons/lucide/info";
+import EmptyState from "@/components/EmptyState.vue";
+import TicketPriority from "@/components/TicketPriority.vue";
 import { useView } from "@/composables/useView";
 import { __ } from "@/translation";
-import { Badge, createResource, FeatherIcon, TabButtons } from "frappe-ui";
+import { View } from "@/types";
+import { createResource, TabButtons } from "frappe-ui";
 import { computed, onMounted, ref, watch, type PropType } from "vue";
 import { useRouter } from "vue-router";
-import TimerIcon from "~icons/lucide/timer";
-import TicketPlusIcon from "~icons/lucide/ticket-plus";
 import CalendarIcon from "~icons/lucide/calendar";
-import { View } from "@/types";
-import TableEmptyState from "@/components/TableEmptyState.vue";
+import TicketPlusIcon from "~icons/lucide/ticket-plus";
+import TimerIcon from "~icons/lucide/timer";
 
 interface TicketReason {
   type: string;
@@ -161,11 +181,10 @@ interface TicketReason {
 }
 
 interface PendingTicket {
-  name: string | number;
+  name: string;
   subject: string;
   status: string;
   priority: string;
-  priority_integer_value: number;
   agent_group?: string;
   agreement_status?: string;
   creation: string;
@@ -175,8 +194,6 @@ interface PendingTicket {
 }
 
 interface PendingTicketsData {
-  max_priority: number;
-  min_priority: number;
   tickets: PendingTicket[];
   total_pending_tickets: number;
 }
@@ -193,7 +210,7 @@ const { views } = useView("HD Ticket");
 const currentTab = ref("upcoming_sla");
 const chartTabs = [
   {
-    label: __("SLA Alerts"),
+    label: __("SLA"),
     value: "upcoming_sla",
   },
   {
@@ -218,7 +235,7 @@ const currentTitle = computed(() => {
 
 const tooltipTexts: Record<string, string> = {
   upcoming_sla: __("Tickets approaching or breached SLA"),
-  new_tickets: __("Tickets assigned to you in the last 24 hours"),
+  new_tickets: __("Tickets assigned to you in the last 7 days"),
   pending: __("Tickets that are awaiting your response"),
 };
 const tooltipText = computed(() => {
@@ -233,7 +250,7 @@ const emptyStateLabel: Record<string, { title: string; description: string }> =
     },
     new_tickets: {
       title: __("No recently assigned tickets"),
-      description: __("No new tickets assigned to you in the last 24 hours"),
+      description: __("No new tickets assigned to you in the last 7 days"),
     },
     pending: {
       title: __("No pending tickets"),
@@ -249,41 +266,36 @@ const chartConfig = computed(() => {
   const _data: PendingTicketsData = getPendingTicketsResource.fetched
     ? getPendingTicketsResource.data
     : props.data;
-  const maxPriority = _data.max_priority;
-  const minPriority = _data.min_priority;
   const tickets = _data.tickets;
   const totalPendingTickets = _data.total_pending_tickets;
 
   return {
     tickets,
-    maxPriority,
-    minPriority,
     totalPendingTickets,
   };
 });
 
+const hasLoadedOnce = ref(false);
+
 const getPendingTicketsResource = createResource({
   url: "helpdesk.api.agent_home.agent_home.get_pending_tickets",
+  onSuccess() {
+    hasLoadedOnce.value = true;
+  },
 });
 
-function getPriorityBadgeColor(integerValue: number) {
-  const min = chartConfig.value.minPriority;
-  const max = chartConfig.value.maxPriority;
-  const range = max - min;
-  if (range === 0) return "gray";
-  const position = (integerValue - min) / range;
-  if (position < 0.25) return "red";
-  if (position < 0.5) return "orange";
-  if (position < 0.75) return "green";
-  return "gray";
-}
+// Show the skeleton only on the first load. On later tab switches we keep the
+// previous rows visible (dimmed) until fresh data arrives, avoiding a flicker.
+const showSkeleton = computed(
+  () => getPendingTicketsResource.loading && !hasLoadedOnce.value
+);
 
 function getReasonColorClass(reason: {
   text: string;
   seconds_until_due?: number;
 }) {
   if (reason.text.includes("overdue")) {
-    return "text-red-500";
+    return "text-ink-red-6";
   }
 
   if (
@@ -293,10 +305,10 @@ function getReasonColorClass(reason: {
     const oneHour = 3600;
     const twoHours = 7200;
     if (reason.seconds_until_due <= oneHour) {
-      return "text-red-500";
+      return "text-ink-red-6";
     }
     if (reason.seconds_until_due <= twoHours) {
-      return "text-orange-500";
+      return "text-ink-orange-5";
     }
   }
   return "";
@@ -312,7 +324,7 @@ const goToTicket = (ticket: PendingTicket) => {
 const redirectToSeeAllTickets = () => {
   const tabToViewMap: Record<string, string> = {
     pending: "STD-VIEW-PENDING-TICKETS",
-    upcoming_sla: "STD-VIEW-SLA-DUE",
+    upcoming_sla: "STD-VIEW-SLA-ALERTS",
     new_tickets: "STD-VIEW-RECENTLY-ASSIGNED-TICKETS",
   };
 

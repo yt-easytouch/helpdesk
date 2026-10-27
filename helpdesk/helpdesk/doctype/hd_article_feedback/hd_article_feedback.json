@@ -7,6 +7,7 @@
  "field_order": [
   "article",
   "user",
+  "visitor_id",
   "feedback"
  ],
  "fields": [
@@ -29,12 +30,20 @@
    "fieldname": "article",
    "fieldtype": "Link",
    "label": "Article",
-   "options": "HD Article"
+   "options": "HD Article",
+   "search_index": 1
+  },
+  {
+   "description": "Cookie that tells one signed-out reader from another",
+   "fieldname": "visitor_id",
+   "fieldtype": "Data",
+   "label": "Visitor ID",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-02 14:17:57.949674",
+ "modified": "2026-10-14 15:52:16.630884",
  "modified_by": "Administrator",
  "module": "Helpdesk",
  "name": "HD Article Feedback",
@@ -50,14 +59,6 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "delete": 1,
-   "if_owner": 1,
-   "read": 1,
-   "role": "All",
    "write": 1
   }
  ],

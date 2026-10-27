@@ -1,10 +1,40 @@
 import frappe
 
+from helpdesk.helpdesk.doctype.hd_settings.helpers import set_site_brand_name
+from helpdesk.utils import agent_manager_only
+
+
+@frappe.whitelist(methods=["POST"])
+@agent_manager_only
+def mark_persona_captured(brand_name: str | None = None) -> None:
+    """Flag the onboarding persona questionnaire as done so it never re-prompts,
+    and adopt the org name as the brand name.
+    """
+    frappe.db.set_single_value("HD Settings", "persona_captured", 1)
+    brand_name = (brand_name or "").strip()
+    if brand_name:
+        frappe.db.set_single_value("HD Settings", "brand_name", brand_name)
+        set_site_brand_name(brand_name)
+        # set_single_value skips Website Settings' on_update, so clear the cache
+        # ourselves for the new brand to show up in the desk/PWA/app identity.
+        frappe.clear_cache()
+
 
 @frappe.whitelist()
-def get_first_ticket():
+@agent_manager_only
+def get_welcome_ticket() -> str | None:
+    """Name of the seeded welcome ticket, if it still exists."""
+    return frappe.db.get_value("HD Ticket", {"subject": "Welcome to Helpdesk"}, "name")
+
+
+@frappe.whitelist()
+def get_first_ticket(ticket: str | None = None):
     """Get first ticket created except the default ticket"""
-    ticket = frappe.get_all(
+    # If a cached ticket ID was passed, verify it still exists
+    if ticket and frappe.db.exists("HD Ticket", ticket):
+        return ticket
+
+    result = frappe.get_all(
         "HD Ticket",
         filters={
             "subject": ["!=", "Welcome to Helpdesk"],
@@ -14,7 +44,7 @@ def get_first_ticket():
         order_by="creation asc",
         limit=1,
     )
-    return ticket[0].name if ticket else None
+    return result[0].name if result else None
 
 
 @frappe.whitelist()

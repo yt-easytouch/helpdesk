@@ -1,9 +1,6 @@
 <template>
-  <Dialog
-    v-model="open"
-    :options="{ title: __('Keyboard Shortcuts'), size: '4xl' }"
-  >
-    <template #body-content>
+  <Dialog v-model:open="open" :title="__('Keyboard Shortcuts')" size="4xl">
+    <template #default>
       <div class="w-full grid grid-cols-2 gap-10 py-1 shortcutsModal">
         <div
           v-for="group in shortcutGroups"
@@ -11,7 +8,7 @@
           class="pb-4"
           :class="!group.hideBorder && 'border-b border-outline-gray-2'"
         >
-          <h2 class="text-lg font-semibold text-ink-gray-9 mb-4">
+          <h2 class="text-md-semibold text-ink-gray-9 mb-4">
             {{ group.title }}
           </h2>
           <ul class="space-y-2">
@@ -23,11 +20,11 @@
               <div class="text-ink-gray-7 text-base flex-1">
                 {{ shortcut.description }}
               </div>
-              <div class="flex space-x-1 gap-1 justify-end">
+              <div class="flex gap-1 justify-end">
                 <span
                   v-for="(key, kIndex) in shortcut.keys"
                   :key="kIndex"
-                  class="bg-surface-gray-2 border border-outline-gray-2 text-xs rounded-sm text-ink-gray-8 shadow-sm min-w-5 h-5 flex items-center justify-center"
+                  class="bg-surface-gray-2 border border-outline-gray-2 text-xs rounded-1 text-ink-gray-8 shadow-sm min-w-5 h-5 flex items-center justify-center"
                   :class="[
                     ![metaIcon, shiftKey].includes(key) && 'w-5 ',
                     key === shiftKey && '!px-2',
@@ -45,9 +42,8 @@
 </template>
 
 <script setup lang="ts">
-import { useDevice } from "@/composables/device";
-import { useShortcut } from "@/composables/shortcuts";
-import { isCustomerPortal } from "@/utils";
+import { useDevice } from "@helpdesk/shared/device";
+import { useShortcut } from "@helpdesk/shared/shortcuts";
 import { Dialog } from "frappe-ui";
 import { computed, onMounted } from "vue";
 import { __ } from "@/translation";
@@ -92,6 +88,7 @@ const shortcutGroups = computed<ShortcutGroup[]>(() => [
       { keys: [shiftKey, "T"], description: __("Change team") },
       { keys: ["A"], description: __("Assign ticket") },
       { keys: ["S"], description: __("Change status") },
+      { keys: ["G"], description: __("Add tags") },
       { keys: [metaIcon, "."], description: __("Copy ticket id") },
       { keys: [metaIcon, shiftKey, "."], description: __("Copy ticket URL") },
     ],
@@ -115,7 +112,6 @@ const shortcutGroups = computed<ShortcutGroup[]>(() => [
 ]);
 
 onMounted(() => {
-  if (isCustomerPortal.value) return;
   useShortcut({ key: "/", meta: true }, () => {
     open.value = !open.value;
   });
@@ -123,7 +119,7 @@ onMounted(() => {
 </script>
 <style>
 /* Hack to remove focus ring from buttons in shortcuts modal */
-.bg-surface-modal:has(.shortcutsModal) button {
+.bg-surface-elevation-2:has(.shortcutsModal) button {
   @apply focus-visible:ring-0;
 }
 </style>

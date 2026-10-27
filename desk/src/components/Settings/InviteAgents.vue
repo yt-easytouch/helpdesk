@@ -14,14 +14,20 @@
           :debounce="100"
           :description="__('Comma separated emails to invite.')"
         />
-        <FormControl
-          :label="__('Role')"
-          type="select"
-          :required="true"
-          :options="roleOptions"
-          v-model="role"
-          :description="roleDescription"
-        />
+        <div class="space-y-1.5">
+          <label class="block text-base text-ink-gray-5">
+            {{ __("Role") }}
+            <span class="text-ink-red-6 select-none" aria-hidden="true">*</span>
+          </label>
+          <Select :options="roleOptions" v-model="role" required class="w-full">
+            <template #suffix>
+              <LucideChevronDown
+                class="size-4 shrink-0 text-ink-gray-4 ms-auto"
+              />
+            </template>
+          </Select>
+          <p class="text-p-xs text-ink-gray-5">{{ roleDescription }}</p>
+        </div>
         <Button
           type="submit"
           variant="solid"
@@ -32,14 +38,14 @@
         >
       </form>
       <template v-if="pendingInvitesResource.data?.length">
-        <h2 class="mt-8 text-base font-semibold">
+        <h2 class="mt-8 text-base-semibold">
           {{ __("Pending Invites") }}
         </h2>
         <ul class="flex flex-col gap-[0.375rem] mt-3">
           <li
             v-for="invite in pendingInvitesResource.data"
             :key="invite.name"
-            class="flex items-center justify-between px-3 py-1 rounded-lg bg-surface-gray-2"
+            class="flex items-center justify-between px-3 py-1 rounded-6 bg-surface-gray-2"
           >
             <div class="text-base">
               <span class="text-ink-gray-8">
@@ -58,7 +64,7 @@
               >
                 <div>
                   <Button
-                    icon="x"
+                    icon="lucide-x"
                     variant="ghost"
                     :loading="
                       cancelInviteResource.loading &&
@@ -97,18 +103,28 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from "@/stores/auth";
-import { FormControl, Button, Tooltip, createResource, toast } from "frappe-ui";
-import { computed, ref } from "vue";
-import { useOnboarding } from "frappe-ui/frappe";
 import SettingsLayoutBase from "@/components/layouts/SettingsLayoutBase.vue";
+import { useAuthStore } from "@/stores/auth";
 import { capture } from "@/telemetry";
 import { __ } from "@/translation";
+import { handleInviteUserSuccess } from "@/utils";
+import {
+  Button,
+  FormControl,
+  Select,
+  Tooltip,
+  createResource,
+  toast,
+} from "frappe-ui";
+import { useOnboarding } from "@framework/ui";
+import { computed, ref } from "vue";
+import LucideChevronDown from "~icons/lucide/chevron-down";
 
 const authStore = useAuthStore();
 const { isAdmin, isManager } = authStore;
 
-const { updateOnboardingStep } = useOnboarding("helpdesk");
+// @ts-expect-error
+const { updateOnboardingStep } = useOnboarding("helpdesk") ?? {};
 
 const emails = ref("");
 
@@ -168,7 +184,8 @@ const roleDescription = computed(
 
 const onSubmit = async () => {
   if (emails.value.trim() === "") {
-    toast.error(__("At least one email required"));
+    toast.error(__("Please enter at least one valid email to send an invite."));
+    return;
   }
   await inviteByEmailResource.submit({
     emails: emails.value,
@@ -184,8 +201,6 @@ const resetInputValues = () => {
   role.value = roleOptions[0].value;
 };
 
-const emailsToStr = (emails: readonly string[]) => emails.join(", ");
-
 const inviteByEmailResource = createResource({
   url: "frappe.core.api.user_invitation.invite_by_email",
   onSuccess(
@@ -198,24 +213,9 @@ const inviteByEmailResource = createResource({
     >
   ) {
     resetInputValues();
-    let emailsStr = emailsToStr(data.invited_emails);
-    if (emailsStr.trim() !== "") {
-      toast.success(`${emailsStr} invited successfully`);
-    }
-    emailsStr = emailsToStr(data.disabled_user_emails);
-    if (emailsStr.trim() !== "") {
-      toast.info(`${emailsStr} already present and disabled`);
-    }
-    emailsStr = emailsToStr(data.pending_invite_emails);
-    if (emailsStr.trim() !== "") {
-      toast.info(`${emailsStr} already invited`);
-    }
-    emailsStr = emailsToStr(data.accepted_invite_emails);
-    if (emailsStr.trim() !== "") {
-      toast.info(`${emailsStr} already present`);
-    }
+    handleInviteUserSuccess(data);
     pendingInvitesResource.reload();
-    updateOnboardingStep("invite_your_team");
+    updateOnboardingStep?.("invite_agents");
     capture("agents_invited", {
       data: {
         role: role.value,
@@ -226,16 +226,24 @@ const inviteByEmailResource = createResource({
 
 const pendingInvitesResource = createResource({
   url: "frappe.core.api.user_invitation.get_pending_invitations",
-  params: { app_name: "helpdesk" },
+  params: {
+    app_name: "helpdesk",
+  },
   auto: true,
   method: "GET",
+  transform: (data) =>
+    data.filter((invite) =>
+      invite.roles.some((role) =>
+        ["Agent", "Agent Manager", "System Manager"].includes(role)
+      )
+    ),
 });
 
 const cancelInviteResource = createResource({
   url: "frappe.core.api.user_invitation.cancel_invitation",
   method: "PATCH",
   onSuccess() {
-    toast.success("Invitation cancelled successfully");
+    toast.success(__("Invitation cancelled successfully"));
     pendingInvitesResource.fetch();
   },
 });

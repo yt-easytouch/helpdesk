@@ -4,18 +4,20 @@
       <template #left-header>
         <ViewBreadcrumbs
           :label="__('Tickets')"
-          :route-name="isCustomerPortal ? 'TicketsCustomer' : 'TicketsAgent'"
+          route-name="TicketsAgent"
           :options="dropdownOptions"
-          :dropdown-actions="viewActions"
+          :dropdown-actions="(view) => viewActions(view, viewDialogConfig)"
           :current-view="currentView"
         />
       </template>
       <template #right-header>
-        <RouterLink
-          class="inline-flex"
-          :to="{ name: isCustomerPortal ? 'TicketNew' : 'TicketAgentNew' }"
-        >
-          <Button label="Create" theme="gray" variant="solid">
+        <RouterLink class="inline-flex" :to="{ name: 'TicketAgentNew' }">
+          <Button
+            class="rtl:flex-row-reverse"
+            :label="__('Create')"
+            theme="gray"
+            variant="solid"
+          >
             <template #prefix>
               <LucidePlus class="h-4 w-4" />
             </template>
@@ -29,7 +31,7 @@
       @row-click="
         (row) =>
           $router.push({
-            name: isCustomerPortal ? 'TicketCustomer' : 'TicketAgent',
+            name: 'TicketAgent',
             params: { ticketId: row },
           })
       "
@@ -42,34 +44,48 @@
       "
     />
     <ViewModal
-      v-if="viewDialog.show"
-      v-model="viewDialog"
-      @update="(view, action) => handleView(view, action)"
+      v-if="viewDialogConfig.show"
+      v-model="viewDialogConfig"
+      @update="onViewModalUpdate"
+    />
+    <BulkReplyModal
+      v-model="showBulkReplyModal"
+      :selections="listSelections"
+      @success="listViewRef?.unselectAll()"
+    />
+    <BulkEditModal
+      v-model="showBulkEditModal"
+      :selections="listSelections"
+      @success="reset(true)"
+    />
+    <BulkAssignModal
+      v-model="showBulkAssignModal"
+      :selections="listSelections"
+      @success="reset(true)"
     />
   </div>
 </template>
 
 <script setup lang="ts">
 import { LayoutHeader, ListViewBuilder } from "@/components";
-import {
-  EditIcon,
-  IndicatorIcon,
-  PinIcon,
-  TicketIcon,
-  UnpinIcon,
-} from "@/components/icons";
-import ExportModal from "@/components/ticket/ExportModal.vue";
+import { TicketIcon } from "@/components/icons";
+import IndicatorIcon from "@/components/icons/IndicatorIcon.vue";
+import TicketPriority from "@/components/TicketPriority.vue";
+import BulkAssignModal from "@/components/ticket-agent/BulkAssignModal.vue";
+import BulkEditModal from "@/components/ticket-agent/BulkEditModal.vue";
+import BulkReplyModal from "@/components/ticket-agent/BulkReplyModal.vue";
+import ExportModal from "@helpdesk/shared/ExportModal.vue";
 import ViewBreadcrumbs from "@/components/ViewBreadcrumbs.vue";
+import { normalizeFilters } from "@helpdesk/shared/filter";
 import ViewModal from "@/components/ViewModal.vue";
 import { currentView, useView } from "@/composables/useView";
-import { dayjs } from "@/dayjs";
 import { useAuthStore } from "@/stores/auth";
 import { globalStore } from "@/stores/globalStore";
 import { useTicketStatusStore } from "@/stores/ticketStatus";
 import { __ } from "@/translation";
 import { View } from "@/types";
-import { getIcon, isCustomerPortal } from "@/utils";
-import { Badge, FeatherIcon, toast, Tooltip, usePageMeta } from "frappe-ui";
+import { resolutionBadge, responseBadge } from "@helpdesk/shared/ticketCells";
+import { Badge, usePageMeta } from "frappe-ui";
 import { computed, h, onMounted, onUnmounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -78,13 +94,13 @@ const route = useRoute();
 
 const {
   getCurrentUserViews,
-  createView,
   publicViews,
   pinnedViews,
   findView,
-  updateView,
-  deleteView,
   standardViews,
+  viewActions,
+  handleView,
+  resetViewDialog,
 } = useView("HD Ticket");
 
 const activeView = computed(() => findView(route.query.view as string).value);
@@ -92,7 +108,7 @@ const hasActiveFilters = computed(
   () => Object.keys(listViewRef.value?.list?.params?.filters || {}).length > 0
 );
 
-const { $dialog, $socket } = globalStore();
+const { $socket } = globalStore();
 const { isManager, userId } = useAuthStore();
 
 const listViewRef = ref(null);
@@ -101,19 +117,53 @@ const showExportModal = ref(false);
 const { getStatus } = useTicketStatusStore();
 
 const listSelections = ref(new Set());
+
+const showBulkReplyModal = ref(false);
+const showBulkEditModal = ref(false);
+const showBulkAssignModal = ref(false);
+
 const selectBannerActions = [
   {
+    label: __("Reply"),
+    icon: "lucide-corner-up-left",
+    inline: true,
+    onClick: (selections: Set<string>) => {
+      listSelections.value = new Set(selections);
+      showBulkReplyModal.value = true;
+    },
+  },
+  {
+    label: __("Assign"),
+    icon: "lucide-user-plus",
+    inline: true,
+    onClick: (selections: Set<string>) => {
+      listSelections.value = new Set(selections);
+      showBulkAssignModal.value = true;
+    },
+  },
+  {
     label: __("Export"),
-    icon: "download",
+    icon: "lucide-download",
     onClick: (selections: Set<string>) => {
       listSelections.value = new Set(selections);
       showExportModal.value = true;
+    },
+  },
+  {
+    label: __("Edit"),
+    icon: "lucide-pencil",
+    onClick: (selections: Set<string>) => {
+      listSelections.value = new Set(selections);
+      showBulkEditModal.value = true;
     },
   },
 ];
 
 const options = computed(() => ({
   doctype: "HD Ticket",
+  groupBy: true,
+  // two fields Helpdesk never fills in, and the per-ticket feedback-link token
+  groupByExclude: ["avg_response_time", "user_resolution_time", "key"],
   columnConfig: {
     subject: {
       custom: ({ row, item }) => {
@@ -131,36 +181,42 @@ const options = computed(() => ({
     status: {
       custom: ({ item }) => {
         const status = getStatus(item);
-        const label = isCustomerPortal.value
-          ? status?.["label_customer"]
-          : status?.["label_agent"];
+        const label = status?.["label_agent"];
         return h(
           "div",
-          { class: "flex items-center space-x-2 justify-start w-full" },
+          { class: "flex items-center gap-1.5 justify-start w-full" },
           [
             h(IndicatorIcon, { class: status?.["parsed_color"] }),
-            h("span", { class: "truncate flex-1" }, label),
+            h("span", { class: "truncate flex-1 text-base" }, label),
           ]
         );
       },
     },
+    priority: {
+      custom: ({ item }) => h(TicketPriority, { priority: item }),
+    },
     agreement_status: {
       custom: ({ item }) => {
+        if (!item) return null;
         return h(Badge, {
-          label: item,
+          label: __(item),
           theme: slaStatusColorMap[item],
-          variant: "outline",
+          variant: "subtle",
         });
       },
     },
     response_by: {
-      custom: ({ row, item }) => handle_response_by_field(row, item),
+      custom: ({ row, item }) => responseBadge(row, item),
     },
     resolution_by: {
-      custom: ({ row, item }) => handle_resolution_by_field(row, item),
+      custom: ({ row, item }) =>
+        resolutionBadge(
+          row,
+          item,
+          getStatus(row.status)?.category === "Paused"
+        ),
     },
   },
-  isCustomerPortal: isCustomerPortal.value,
   selectable: true,
   showSelectBanner: true,
   selectBannerActions,
@@ -181,73 +237,11 @@ const options = computed(() => ({
         : undefined,
   },
   rowRoute: {
-    name: isCustomerPortal.value ? "TicketCustomer" : "TicketAgent",
+    name: "TicketAgent",
     prop: "ticketId",
   },
   hideColumnSetting: false,
 }));
-
-function handle_response_by_field(row: any, item: string) {
-  if (!row.first_responded_on && dayjs(item).isBefore(new Date())) {
-    return h(Badge, {
-      label: __("Failed"),
-      theme: "red",
-      variant: "outline",
-    });
-  }
-  if (row.first_responded_on && dayjs(row.first_responded_on).isBefore(item)) {
-    return h(Badge, {
-      label: __("Fulfilled"),
-      theme: "green",
-      variant: "outline",
-    });
-  } else if (dayjs(row.first_responded_on).isAfter(item)) {
-    return h(Badge, {
-      label: __("Failed"),
-      theme: "red",
-      variant: "outline",
-    });
-  } else {
-    return h(
-      Tooltip,
-      {
-        text: dayjs(item).long(),
-      },
-      () => dayjs.tz(item).fromNow()
-    );
-  }
-}
-
-function handle_resolution_by_field(row: any, item: string) {
-  const status = getStatus(row.status) || {};
-  if (status.category === "Paused") {
-    return h(Badge, {
-      label: __("Paused"),
-      theme: "blue",
-      variant: "outline",
-    });
-  } else if (row.resolution_date && dayjs(row.resolution_date).isBefore(item)) {
-    return h(Badge, {
-      label: __("Fulfilled"),
-      theme: "green",
-      variant: "outline",
-    });
-  } else if (dayjs(row.resolution_date).isAfter(item)) {
-    return h(Badge, {
-      label: __("Failed"),
-      theme: "red",
-      variant: "outline",
-    });
-  } else {
-    return h(
-      Tooltip,
-      {
-        text: dayjs(item).long(),
-      },
-      () => dayjs.tz(item).fromNow()
-    );
-  }
-}
 
 async function exportRows(
   export_type: "CSV" | "Excel" = "Excel",
@@ -259,19 +253,29 @@ async function exportRows(
   const fields = JSON.stringify(list.data.columns.map((f) => f.key));
   const order_by = list.params.order_by;
 
-  let filters = { ...list.params.filters };
+  // Resolve `@me` filters to the current session user before export
+  const resolveAtMe = (entry: any) => {
+    if (Array.isArray(entry)) return entry.map(resolveAtMe);
+    if (entry === "@me") return userId;
+    if (entry === "%@me%") return `%${userId}%`;
+    return entry;
+  };
+  const conditions = normalizeFilters(list.params.filters).map(
+    ([field, operator, value]) => [field, operator, resolveAtMe(value)]
+  );
   let pageLength: number;
 
   if (export_all) {
-    filters = JSON.stringify(filters);
     pageLength = list.data.total_count;
   } else {
     pageLength = listSelections.value.size;
-    filters["name"] = ["in", Array.from(listSelections.value)];
-    filters = JSON.stringify(filters);
+    conditions.push(["name", "in", Array.from(listSelections.value)]);
   }
+  const filters = JSON.stringify(conditions);
 
-  window.location.href = `/api/method/frappe.desk.reportview.export_query?file_format_type=${export_type}&title=HD Ticket&doctype=HD Ticket&fields=${fields}&filters=${filters}&order_by=${order_by}&page_length=${pageLength}&start=0&view=Report&with_comment_count=1`;
+  window.location.href = `/api/method/frappe.desk.reportview.export_query?file_format_type=${export_type}&title=HD Ticket&doctype=HD Ticket&fields=${fields}&filters=${encodeURIComponent(
+    filters
+  )}&order_by=${order_by}&page_length=${pageLength}&start=0&view=Report&with_comment_count=1`;
   reset();
   showExportModal.value = false;
 }
@@ -283,14 +287,14 @@ function reset(reload = false) {
 }
 
 const slaStatusColorMap = {
-  Fulfilled: "green",
+  Fulfilled: "gray",
   Failed: "red",
-  "Resolution Due": "orange",
-  "First Response Due": "orange",
+  "Resolution Due": "amber",
+  "First Response Due": "amber",
   Paused: "blue",
 };
 
-let viewDialog = reactive({
+let viewDialogConfig = reactive({
   show: false,
   view: {
     label: "",
@@ -304,13 +308,13 @@ const dropdownOptions = computed(() => {
   const items = [
     {
       group: __("Default Views"),
-      items: [
+      options: [
         {
           label: __("List View"),
-          icon: "align-justify",
+          icon: "lucide-text-align-justify",
           onClick: () =>
             router.push({
-              name: isCustomerPortal.value ? "TicketsCustomer" : "TicketsAgent",
+              name: "TicketsAgent",
             }),
         },
       ],
@@ -321,13 +325,13 @@ const dropdownOptions = computed(() => {
   if (getCurrentUserViews.value?.length !== 0) {
     items.push({
       group: __("Saved Views"),
-      items: parseViews(getCurrentUserViews.value),
+      options: parseViews(getCurrentUserViews.value),
     });
   }
   if (pinnedViews.value?.length !== 0) {
     items.push({
       group: __("Private Views"),
-      items: parseViews(pinnedViews.value),
+      options: parseViews(pinnedViews.value),
     });
   }
 
@@ -342,19 +346,19 @@ const dropdownOptions = computed(() => {
 
   items.push({
     group: __("Public Views"),
-    items: parseViews(uniquePublicViews),
+    options: parseViews(uniquePublicViews),
   });
 
   items.push({
     group: __("Create View"),
     hideLabel: true,
-    items: [
+    options: [
       {
         label: __("Create View"),
-        icon: "plus",
+        icon: "lucide-plus",
         onClick: () => {
-          resetState();
-          viewDialog.show = true;
+          resetViewDialog(viewDialogConfig);
+          viewDialogConfig.show = true;
         },
       },
     ],
@@ -362,170 +366,6 @@ const dropdownOptions = computed(() => {
 
   return items;
 });
-
-let selectedView: View | null = null;
-
-const toggleViewVisibility = (_view: any, title: string, message: string) => {
-  const newView: any = {
-    name: _view.name,
-    public: !_view.public,
-  };
-
-  if (_view.public) {
-    $dialog({
-      title,
-      message,
-      actions: [
-        {
-          label: __("Confirm"),
-          variant: "solid",
-          onClick({ close }: any) {
-            close();
-            updateView(newView);
-          },
-        },
-      ],
-    });
-  } else {
-    updateView(newView);
-  }
-};
-
-const viewActions = (view) => {
-  const _view = findView(view.name).value;
-
-  let actions = [
-    {
-      group: __("Default Views"),
-      hideLabel: true,
-      items: [
-        {
-          label: __("Duplicate"),
-          icon: h(FeatherIcon, { name: "copy" }),
-          onClick: () => {
-            viewDialog.view.label = _view.label + " (New)";
-            viewDialog.view.icon = _view.icon;
-            viewDialog.view.name = _view.name;
-            viewDialog.mode = "duplicate";
-            selectedView = _view;
-            viewDialog.show = true;
-          },
-        },
-      ],
-    },
-  ];
-  if (!_view.public || isManager) {
-    if (!_view.public && !_view.is_standard) {
-      actions[0].items.push({
-        label: _view?.pinned ? __("Unpin View") : __("Pin View"),
-        icon: h(_view?.pinned ? UnpinIcon : PinIcon, { class: "h-4 w-4" }),
-        onClick: () => {
-          const newView = {
-            name: _view.name,
-          };
-          newView["pinned"] = !_view.pinned;
-          updateView(newView);
-        },
-      });
-    }
-    if (_view?.is_standard && isManager) {
-      actions[0].items.push({
-        label: _view?.public ? __("Hide from sidebar") : __("Show in sidebar"),
-        icon: h(FeatherIcon, {
-          name: _view?.public ? "eye-off" : "eye",
-          class: "h-4 w-4",
-        }),
-        onClick: () => {
-          toggleViewVisibility(
-            _view,
-            __("Hide view from sidebar"),
-            __(
-              "{0} view is currently visible in the sidebar. Hiding it will remove it from the sidebar.",
-              [_view.label]
-            )
-          );
-        },
-      });
-    }
-    if (!_view.is_standard) {
-      if (isManager && !isCustomerPortal.value) {
-        actions[0].items.push({
-          label: _view?.public ? __("Make Private") : __("Make Public"),
-          icon: h(FeatherIcon, {
-            name: _view?.public ? "lock" : "unlock",
-            class: "h-4 w-4",
-          }),
-          onClick: () => {
-            toggleViewVisibility(
-              _view,
-              __("Make view private"),
-              __(
-                "{0} view is currently public. Changing it to private will hide it for all the users.",
-                [_view.label]
-              )
-            );
-          },
-        });
-      }
-      actions[0].items.push({
-        label: __("Edit"),
-        icon: h(EditIcon, { class: "h-4 w-4" }),
-        onClick: () => {
-          viewDialog.view.label = _view.label;
-          viewDialog.view.icon = _view.icon;
-          viewDialog.view.name = _view.name;
-          viewDialog.mode = "edit";
-          viewDialog.show = true;
-        },
-      });
-      actions.push({
-        group: __("Delete View"),
-        hideLabel: true,
-        items: [
-          {
-            label: __("Delete"),
-            icon: "trash-2",
-            theme: "red",
-            onClick: () => {
-              $dialog({
-                title: __("Delete {0}", [_view.label]),
-                message:
-                  __("Are you sure you want to delete this view?") +
-                  (_view.public
-                    ? " " +
-                      __(
-                        "This view is public, and will be removed for all users."
-                      )
-                    : ""),
-                actions: [
-                  {
-                    label: __("Confirm"),
-                    variant: "solid",
-                    iconLeft: "trash-2",
-                    theme: "red",
-                    onClick({ close }) {
-                      if (route.query.view === _view.name) {
-                        router.push({
-                          name: isCustomerPortal.value
-                            ? "TicketsCustomer"
-                            : "TicketsAgent",
-                        });
-                      }
-                      deleteView(_view.name);
-                      handleSuccess(__("deleted"));
-                      close();
-                    },
-                  },
-                ],
-              });
-            },
-          },
-        ],
-      });
-    }
-  }
-  return actions;
-};
 
 function parseViews(views: View[]) {
   return views?.map((view) => {
@@ -547,70 +387,8 @@ function parseViews(views: View[]) {
   });
 }
 
-function handleView(viewInfo, action) {
-  let view: View;
-  if (action === "update") {
-    updateView(viewInfo);
-    handleSuccess("updated");
-    currentView.value = {
-      label: viewInfo.label,
-      icon: getIcon(viewInfo.icon),
-    };
-    return;
-  } else if (action === "duplicate") {
-    view = {
-      ...selectedView,
-      filters: JSON.stringify(selectedView.filters),
-      columns: JSON.stringify(selectedView.columns),
-      rows: JSON.stringify(selectedView.rows),
-      label: viewInfo.label,
-      icon: viewInfo.icon,
-      public: false,
-      pinned: false,
-    };
-  } else {
-    view = {
-      dt: "HD Ticket",
-      type: "list",
-      label: viewInfo.label ?? __("List"),
-      icon: viewInfo.icon ?? "",
-      route_name: router.currentRoute.value.name as string,
-      order_by: listViewRef.value?.list?.params.order_by,
-      filters: JSON.stringify(listViewRef.value?.list?.params.filters),
-      columns: JSON.stringify(listViewRef.value?.list?.data.columns),
-      rows: JSON.stringify(listViewRef.value?.list?.data?.rows),
-      is_customer_portal: isCustomerPortal.value,
-    };
-  }
-
-  // createView
-  createView(view, (d) => {
-    currentView.value = {
-      label: d.label || __("List"),
-      icon: getIcon(d.icon),
-    };
-    router.push({
-      name: isCustomerPortal.value ? "TicketsCustomer" : "TicketsAgent",
-      query: {
-        view: d.name,
-      },
-    });
-
-    handleSuccess();
-  });
-}
-
-function handleSuccess(msg = __("created")) {
-  toast.success(__("View {0}", [msg]));
-  resetState();
-}
-function resetState() {
-  viewDialog.show = false;
-  viewDialog.view.label = "";
-  viewDialog.view.icon = "";
-  viewDialog.view.name = "";
-  viewDialog.mode = null;
-  selectedView = null;
+function onViewModalUpdate(viewInfo: any, action: string) {
+  handleView(viewInfo, action, viewDialogConfig, () => listViewRef.value?.list);
 }
 
 onMounted(() => {
@@ -620,18 +398,16 @@ onMounted(() => {
       icon: LucideAlignJustify,
     };
   }
-  if (!isCustomerPortal.value) {
-    $socket.on("helpdesk:new-ticket", () => {
-      listViewRef.value?.reload();
-    });
-  }
+  $socket.on("helpdesk:new-ticket", reloadList);
 });
 
 onUnmounted(() => {
-  if (!isCustomerPortal.value) {
-    $socket.off("helpdesk:new-ticket");
-  }
+  $socket.off("helpdesk:new-ticket", reloadList);
 });
+
+function reloadList() {
+  listViewRef.value?.reload();
+}
 
 usePageMeta(() => {
   return {

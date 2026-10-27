@@ -1,24 +1,36 @@
 <template>
   <Popover
-    class="flex w-full"
-    placement="bottom-end"
-    :matchTargetWidth="true"
-    v-model:show="popoverIsOpen"
+    side="bottom"
+    align="start"
+    :matchTriggerWidth="true"
+    v-model:open="popoverIsOpen"
   >
-    <template #target="{ togglePopover }">
+    <template #trigger>
       <div class="flex flex-col gap-1.5 w-full">
-        <span class="block text-xs text-gray-600">{{ __("Assignee") }}</span>
+        <span v-if="!hideLabel" class="block text-base text-ink-gray-5">
+          {{ __("Assignee") }}
+        </span>
         <Button
           ref="triggerRef"
-          variant="outline"
-          class="!flex !justify-start w-full active:!bg-inherit hover:shadow-sm [&>span]:w-full"
-          @click="togglePopover()"
+          :variant="ghost ? 'ghost' : 'outline'"
+          class="group !flex !justify-start w-full active:!bg-inherit [&>span]:w-full"
+          :class="
+            ghost
+              ? [
+                  '!h-7 !rounded-4 !border !border-transparent !bg-surface-base !px-2 hover:!bg-surface-base focus:focus-ring',
+                  // Hold the ring while the dropdown is open, mirroring the Link
+                  // field's data-[state=open]:focus-ring (focus lives in the popover).
+                  popoverIsOpen && 'focus-ring',
+                ]
+              : 'hover:shadow-sm'
+          "
         >
-          <div class="flex items-center min-h-5 gap-2 w-full">
+          <div class="flex items-center min-h-5 gap-2 w-full min-w-0">
             <template v-if="localAssignees.length > 0">
               <MultipleAvatar
                 :avatars="localAssignees.map((a) => a.name)"
                 size="sm"
+                :max="2"
               />
               <span
                 v-if="localAssignees.length > 1"
@@ -28,56 +40,58 @@
               </span>
             </template>
             <template v-else>
-              <span class="text-ink-gray-5">{{ __("No one") }}</span>
-              <!-- <span
-                v-if="!popoverIsOpen"
-                class="text-xs text-ink-gray-6 hover:text-ink-gray-8 cursor-pointer underline ml-auto"
-                @click.stop="assignSelf"
-              >
-                {{ __("Assign yourself") }}
-              </span> -->
+              <span v-if="ghost" class="text-ink-gray-4">
+                {{ __("Set Assignee") }}...
+              </span>
+              <span v-else class="text-ink-gray-5 leading-5">
+                {{ emptyLabel }}
+              </span>
             </template>
           </div>
           <template #suffix>
-            <LucideChevronDown class="h-4 w-4 ml-auto text-ink-gray-5" />
+            <LucideChevronDown
+              class="ms-auto size-4 shrink-0 transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
+              :class="[
+                ghost ? 'text-ink-gray-6' : 'text-ink-gray-5',
+                popoverIsOpen && 'rotate-180',
+                // Filled + closed: keep the chevron hidden until hover/focus,
+                // like a filled Link field's action icons. Empty always shows it.
+                ghost && localAssignees.length > 0 && !popoverIsOpen
+                  ? 'hidden group-hover:block group-focus-within:block'
+                  : '',
+              ]"
+            />
           </template>
         </Button>
       </div>
     </template>
-    <template #body="{ isOpen }">
+    <!-- body-main (not body) so the shared PopoverPanel supplies the shell
+         chrome and the combobox's scale-from-trigger open animation. -->
+    <template #default="{ open: isOpen }">
+      <!-- Pin to the trigger width. matchTriggerWidth only sets min-width, so the
+           panel is otherwise shrink-to-fit and grows to the widest agent name
+           (then collapses as you filter) -> width jitter. Fixing the width lets
+           the rows' min-w-0 truncate instead. -->
       <div
         v-if="isOpen"
-        class="my-2 divide-y divide-outline-gray-modals rounded-lg bg-surface-modal shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none"
+        class="w-[var(--reka-popover-trigger-width)] focus:outline-none"
       >
-        <!-- Search Header -->
-        <div class="py-1.5 px-1.5">
-          <div
-            class="flex h-7 items-center text-sm font-medium text-ink-gray-6 justify-between"
+        <!-- Search Header: mirror the tag picker's flush search row - a
+             borderless input with a bottom divider and the key-cap suffix. -->
+        <div class="flex items-center border-b border-outline-gray-2 px-3">
+          <TextInput
+            ref="inputRef"
+            v-model="searchText"
+            :placeholder="__('Search agents...')"
+            variant="ghost"
+            class="flex-1 search-agents-input"
+            @click.stop
+            @keydown="handleInputKeydown"
           >
-            <TextInput
-              ref="inputRef"
-              v-model="searchText"
-              :placeholder="__('Search agents...')"
-              variant="ghost"
-              class="flex-1"
-              @click.stop
-              @keydown="handleInputKeydown"
-            >
-              <template #prefix>
-                <LucideSearch class="size-4 text-ink-gray-4" />
-              </template>
-            </TextInput>
-            <Button
-              v-if="searchText.length > 0"
-              variant="ghost"
-              size="sm"
-              @click="searchText = ''"
-            >
-              <template #icon>
-                <LucideX class="size-4" />
-              </template>
-            </Button>
-          </div>
+            <template #suffix>
+              <ShortcutKey v-if="!searchText" keys="A" />
+            </template>
+          </TextInput>
         </div>
 
         <!-- Agent List -->
@@ -96,7 +110,7 @@
                 v-for="(agent, index) in sortedAgentOptions"
                 :key="agent.value"
                 :ref="(el) => setOptionRef(index, el as Element)"
-                class="group flex h-7 w-full items-center rounded px-2 text-base text-ink-gray-6 gap-2"
+                class="group flex h-7 w-full items-center rounded-4 px-2 text-base text-ink-gray-6 gap-2"
                 :class="
                   index === highlightedIndex
                     ? 'bg-surface-gray-3'
@@ -108,8 +122,32 @@
                   :modelValue="isSelected(agent.value)"
                   class="flex-shrink-0"
                 />
-                <UserAvatar :name="agent.value" size="sm" class="" />
-                <span class="text-ink-gray-7 flex-1 text-left truncate">
+                <div class="relative flex-shrink-0">
+                  <Tooltip
+                    side="top"
+                    :text="
+                      availabilitySubtitle(
+                        agent.availability,
+                        agent.availability_changed_on
+                      )
+                    "
+                  >
+                    <UserAvatar :name="agent.value" size="sm" />
+                  </Tooltip>
+                  <span
+                    class="absolute block translate-x-1/2 translate-y-1/2 transform rounded-full bottom-0.5 right-0.5"
+                  >
+                    <span
+                      class="block h-2 w-2 rounded-full border border-slate-2"
+                      :class="
+                        agentStatusStore.statusColor(agent.availability || '')
+                      "
+                    />
+                  </span>
+                </div>
+                <span
+                  class="text-ink-gray-7 min-w-0 flex-1 text-start truncate"
+                >
                   {{ agent.label }}
                 </span>
               </button>
@@ -127,39 +165,63 @@
 </template>
 
 <script setup lang="ts">
-import { useShortcut } from "@/composables/shortcuts";
+import ShortcutKey from "@helpdesk/shared/ShortcutKey.vue";
+import { useShortcut } from "@helpdesk/shared/shortcuts";
+import { useAgentStatusStore } from "@/stores/agentStatus.ts";
+import { useConfigStore } from "@/stores/config";
 import { useUserStore } from "@/stores/user";
 import { capture } from "@/telemetry";
 import { __ } from "@/translation";
 import {
-  ActivitiesSymbol,
   AgentOption,
   AssigneeSymbol,
+  LocalAssignee,
   TicketSymbol,
 } from "@/types";
+import { prettyDate } from "@/utils.ts";
 import { useDebounceFn } from "@vueuse/core";
 import {
   Button,
   Checkbox,
   Popover,
   TextInput,
-  call,
+  Tooltip,
   createListResource,
   createResource,
+  dayjsLocal,
   toast,
 } from "frappe-ui";
 import { computed, inject, nextTick, ref, useTemplateRef, watch } from "vue";
-import LucideSearch from "~icons/lucide/search";
 import MultipleAvatar from "../MultipleAvatar.vue";
 import UserAvatar from "../UserAvatar.vue";
+interface Props {
+  hideLabel?: boolean;
+  ghost?: boolean;
+}
 
-const ticket = inject(TicketSymbol)!;
-const assignees = inject(AssigneeSymbol)!;
-const activities = inject(ActivitiesSymbol)!;
+const props = withDefaults(defineProps<Props>(), {
+  hideLabel: false,
+  ghost: false,
+});
+
+const { hideLabel, ghost } = props;
+
+// No ticket in context (bulk assign) means nothing to save to: the picker then
+// just reports its selection through v-model and the parent decides what to do.
+const ticket = inject(TicketSymbol, null);
+const assignees = inject(AssigneeSymbol, null);
+const selection = defineModel<string[]>({ default: () => [] });
+
+// On a ticket the trigger reports state ("No one" is assigned); standalone it is
+// an input still waiting on a choice, so it reads as a placeholder.
+const emptyLabel = computed(() =>
+  ticket ? __("No one") : __("Select agents")
+);
 
 const { getUser } = useUserStore();
 const currentUser = computed(() => getUser("")); // empty string returns current user
-const currentAgentName = (window as any).agent as string | null;
+const agentStatusStore = useAgentStatusStore();
+const currentAgentName = window.agent;
 
 const searchText = ref("");
 const highlightedIndex = ref(0);
@@ -170,16 +232,12 @@ const popoverIsOpen = ref(false);
 const hasBeenOpened = ref(false);
 
 // Local copy of assignees
-const localAssignees = ref<{ name: string; image: string; label: string }[]>(
-  []
-);
-const snapshotAssignees = ref<{ name: string; image: string; label: string }[]>(
-  []
-);
+const localAssignees = ref<LocalAssignee[]>([]);
+const snapshotAssignees = ref<LocalAssignee[]>([]);
 
 // Sync from injected assignees when popover is not open
 watch(
-  () => assignees.value?.data,
+  () => assignees?.value?.data,
   (data) => {
     if (!popoverIsOpen.value && data) {
       localAssignees.value = [...data];
@@ -187,6 +245,21 @@ watch(
   },
   { immediate: true, deep: true }
 );
+
+// Standalone mode: the selection itself is the output, so publish it live.
+watch(
+  localAssignees,
+  (list) => {
+    if (!ticket) selection.value = list.map((a) => a.name);
+  },
+  { deep: true }
+);
+
+// Standalone mode: let the parent clear the picker (e.g. on dialog open).
+watch(selection, (names) => {
+  if (ticket || names.length || !localAssignees.value.length) return;
+  localAssignees.value = [];
+});
 
 // Watch popover open/close — same pattern as old AssignToBody
 watch(popoverIsOpen, (isOpen) => {
@@ -200,12 +273,13 @@ watch(popoverIsOpen, (isOpen) => {
     searchText.value = "";
     highlightedIndex.value = 0;
     nextTick(() => {
-      inputRef.value?.el?.focus();
+      inputRef.value?.focus();
     });
   } else if (hasBeenOpened.value) {
     // Closing after a real open: compute diff and save
     hasBeenOpened.value = false;
     searchText.value = "";
+    if (!ticket) return;
     const currentNames = localAssignees.value.map((a) => a.name);
     const oldNames = snapshotAssignees.value.map((a) => a.name);
     const added = currentNames.filter((n) => !oldNames.includes(n));
@@ -214,62 +288,105 @@ watch(popoverIsOpen, (isOpen) => {
   }
 });
 
-const agentResource = createListResource({
-  doctype: "HD Agent",
-  fields: ["name", "agent_name", "user_image"],
-  filters: { is_active: true },
-  pageLength: 20,
-  auto: true,
+const configStore = useConfigStore();
+const ticketTeam = computed(() => ticket?.value?.doc?.agent_group);
+const restrictToTeam = computed(
+  () =>
+    configStore.teamRestrictionApplied &&
+    configStore.assignWithinTeam &&
+    Boolean(ticketTeam.value)
+);
+const teamMembers = createResource({
+  url: "helpdesk.helpdesk.doctype.hd_team.hd_team.get_team_members",
+  makeParams: () => ({ team: ticketTeam.value }),
+  onSuccess: () => reloadAgents(),
 });
 
-// Fetch current agent separately to guarantee they appear in the list
-const currentAgentResource = currentAgentName
-  ? createResource({
-      url: "frappe.client.get",
-      params: {
-        doctype: "HD Agent",
-        name: currentAgentName,
-        fields: ["name", "agent_name", "user_image"],
-      },
-      auto: true,
-    })
-  : null;
+const agentResource = createListResource({
+  doctype: "HD Agent",
+  fields: [
+    "name",
+    "agent_name",
+    "user_image",
+    "availability",
+    "availability_changed_on",
+  ],
+  filters: { is_active: true },
+  pageLength: 20,
+});
 
-const debouncedSearch = useDebounceFn((text: string) => {
+function reloadAgents(text = "") {
   const filters: Record<string, any> = { is_active: true };
   if (text) {
     filters.agent_name = ["like", `%${text}%`];
   }
+  if (restrictToTeam.value) {
+    filters.name = ["in", teamMembers.data || []];
+  }
   agentResource.filters = filters;
   agentResource.reload();
-}, 300);
+}
+
+const debouncedSearch = useDebounceFn(reloadAgents, 300);
+
+function isOfferable(agentName: string) {
+  return !restrictToTeam.value || teamMembers.data?.includes(agentName);
+}
 
 watch(searchText, (text) => {
   debouncedSearch(text);
 });
 
+watch(
+  [restrictToTeam, ticketTeam],
+  ([restricted]) => {
+    if (!restricted) return reloadAgents();
+    // Drop the previous team's members so none stay offerable while fetching.
+    teamMembers.reset();
+    teamMembers.fetch();
+  },
+  { immediate: true }
+);
+
+// Prefer the live status pushed over the socket (agentStatusStore.liveStatuses)
+// so the dot/tooltip reflect any agent's change made elsewhere this session,
+// falling back to the value fetched when this dropdown first loaded.
+function liveAvailability(agent: {
+  name: string;
+  availability?: string;
+  availability_changed_on?: string;
+}) {
+  const live = agentStatusStore.liveStatuses[agent.name];
+  return {
+    availability: live?.availability ?? agent.availability,
+    availability_changed_on: live?.changedOn ?? agent.availability_changed_on,
+  };
+}
+
 const agentOptions = computed<AgentOption[]>(() => {
   const agents: AgentOption[] = [];
   const seen = new Set<string>();
 
-  // Include current agent only when not searching
-  if (!searchText.value && currentAgentResource?.data) {
-    const a = currentAgentResource.data;
+  // Include current agent only when not searching. Built from the session user
+  // and the store's live status (seeded from auth.get_user) — no extra fetch.
+  if (!searchText.value && currentAgentName && isOfferable(currentAgentName)) {
     agents.push({
-      value: a.name,
-      label: a.agent_name || getUser(a.name).full_name,
-      image: a.user_image || getUser(a.name).user_image,
+      value: currentAgentName,
+      label: currentUser.value.full_name || currentAgentName,
+      image: currentUser.value.user_image || "",
+      ...liveAvailability({ name: currentAgentName }),
     });
-    seen.add(a.name);
+    seen.add(currentAgentName);
   }
 
   if (agentResource.data) {
     for (const agent of agentResource.data) {
-      if (!seen.has(agent.name)) {
+      if (!seen.has(agent.name) && isOfferable(agent.name)) {
         agents.push({
           value: agent.name,
           label: agent.agent_name || getUser(agent.name).full_name,
           image: agent.user_image || getUser(agent.name).user_image,
+          ...liveAvailability(agent),
         });
         seen.add(agent.name);
       }
@@ -296,8 +413,9 @@ const sortedAgentOptions = computed<AgentOption[]>(() => {
         const user = getUser(a.name);
         options.push({
           value: a.name,
-          label: a.label || user.full_name || a.name,
-          image: a.image || user.user_image,
+          label: a.label || a.agent_name || user.full_name || a.name,
+          image: a.image || a.user_image || user.user_image,
+          ...liveAvailability(a),
         });
         seen.add(a.name);
       }
@@ -328,6 +446,29 @@ const sortedAgentOptions = computed<AgentOption[]>(() => {
   return [...selfOption, ...rest];
 });
 
+function availabilitySubtitle(
+  availability?: string,
+  changedOn?: string
+): string {
+  if (!availability) return "";
+  const status = agentStatusStore.getStatus(availability);
+  if (!status) return "";
+  if (status.category === "Active") return __("Active now");
+
+  const label = __(availability);
+  if (!changedOn) return label;
+  // Suffix with how long ago they were last active, e.g. "Away · Last seen 2
+  // minutes ago". prettyDate says "Just now" under a minute, which we lowercase
+  // so it reads cleanly after "Last seen".
+  const secondsSinceChange = dayjsLocal().diff(
+    dayjsLocal(changedOn),
+    "seconds"
+  );
+  const lastSeen =
+    secondsSinceChange < 60 ? __("just now") : prettyDate(changedOn);
+  return lastSeen ? __("{0} · Last active {1}", label, lastSeen) : label;
+}
+
 function isSelected(agentName: string): boolean {
   return localAssignees.value.some((a) => a.name === agentName);
 }
@@ -343,11 +484,17 @@ function toggleAgent(agent: AgentOption) {
       pinnedSelectedNames.value.delete(agent.value);
     }
   } else {
-    localAssignees.value.push({
+    const added: LocalAssignee = {
       name: agent.value,
       image: agent.image || "",
       label: agent.label,
-    });
+    };
+    // Carry the option's status so it survives the localAssignees fallback in
+    // sortedAgentOptions (e.g. a search-added agent outside the default page resource call).
+    if (agent.availability) added.availability = agent.availability;
+    if (agent.availability_changed_on)
+      added.availability_changed_on = agent.availability_changed_on;
+    localAssignees.value.push(added);
     // Pin only when selecting during search so they stay visible when search clears
     if (isSearching) {
       pinnedSelectedNames.value.add(agent.value);
@@ -398,53 +545,18 @@ watch(searchText, () => {
   highlightedIndex.value = 0;
 });
 
-async function logActivity(action: string) {
-  await call("frappe.client.insert", {
-    doc: {
-      doctype: "HD Ticket Activity",
-      ticket: ticket.value?.name,
-      action,
-    },
-  });
-}
-
-async function assignSelf() {
-  if (!currentAgentName) return;
-
-  if (localAssignees.value.some((a) => a.name === currentAgentName)) return;
-
-  const self = currentUser.value;
-  localAssignees.value.push({
-    name: currentAgentName,
-    image: self.user_image || "",
-    label: self.full_name,
-  });
-
-  try {
-    await addAssigneesResource.submit([currentAgentName]);
-    await logActivity(`assigned ${currentAgentName}`);
-    capture("ticket_assigned", { doctype: "HD Ticket" });
-    toast.success(__("Assignee's updated successfully."));
-    assignees.value.reload();
-    activities.value.reload();
-  } catch {
-    toast.error(__("Failed to update Assignee's."));
-    localAssignees.value = localAssignees.value.filter(
-      (a) => a.name !== currentAgentName
-    );
-  }
-}
-
 // triggered when the popover is closed
 const addAssigneesResource = createResource({
   url: "frappe.desk.form.assign_to.add",
   makeParams: (addedAssignees: string[]) => ({
     doctype: "HD Ticket",
-    name: ticket.value?.name,
+    name: ticket?.value?.name,
     assign_to: addedAssignees,
   }),
   onSuccess: () => {
-    capture("ticket_assigned", { doctype: "HD Ticket" });
+    capture("ticket_assigned", {
+      data: { doctype: "HD Ticket", source: "popover" },
+    });
   },
 });
 
@@ -452,13 +564,39 @@ const removeAssigneesResource = createResource({
   url: "helpdesk.api.doc.remove_assignments",
   makeParams: (removedAssignees: string[]) => ({
     doctype: "HD Ticket",
-    name: ticket.value?.name,
+    name: ticket?.value?.name,
     assignees: removedAssignees,
   }),
 });
 
+// Toast a warning for each newly-added agent who isn't currently active.
+// Returns true if any warning was shown so the caller can defer the success toast.
+function warnUnavailableAgents(addedNames: string[]): boolean {
+  let hasUnavailable = false;
+  // Iterate the rendered options (not just the fetched page) so agents picked
+  // via search — who aren't in the default list — are still checked.
+  for (const agent of sortedAgentOptions.value) {
+    if (!addedNames.includes(agent.value)) continue;
+    // No point warning agents about their own status when assigning themselves.
+    if (agent.value === currentAgentName) continue;
+    const category = agentStatusStore.getStatus(
+      agent.availability || ""
+    )?.category;
+    if (category !== "Away" && category !== "Unavailable") continue;
+
+    toast.warning(
+      category === "Unavailable"
+        ? __("{0} is currently unavailable.", agent.label)
+        : __("{0} is currently away.", agent.label)
+    );
+    hasUnavailable = true;
+  }
+  return hasUnavailable;
+}
+
 async function saveAssignees(added: string[], removed: string[]) {
   if (!added.length && !removed.length) return;
+  let hasUnavailable = false;
 
   try {
     if (removed.length) {
@@ -466,19 +604,20 @@ async function saveAssignees(added: string[], removed: string[]) {
       if (removeResult?.exc) throw new Error(removeResult.exc);
     }
     if (added.length) {
+      hasUnavailable = warnUnavailableAgents(added);
       const addResult = await addAssigneesResource.submit(added);
       if (addResult?.exc) throw new Error(addResult.exc);
     }
 
-    // Log activity only after API calls succeed
-    const logParts: string[] = [];
-    if (added.length) logParts.push(`assigned ${added.join(", ")}`);
-    if (removed.length) logParts.push(`unassigned ${removed.join(", ")}`);
-    await logActivity(logParts.join(" & "));
+    // core assign_to writes the timeline entry itself
 
-    toast.success(__("Assignees updated successfully."));
-    assignees.value.reload();
-    activities.value.reload();
+    // Delay the success toast when warnings were shown so they land first.
+    const successDelay = hasUnavailable ? 1000 : 0;
+    setTimeout(() => {
+      toast.success(__("Assignees updated successfully."));
+    }, successDelay);
+
+    assignees?.value.reload();
   } catch {
     toast.error(__("Failed to update Assignees."));
     localAssignees.value = [...snapshotAssignees.value];
@@ -486,6 +625,22 @@ async function saveAssignees(added: string[], removed: string[]) {
 }
 
 useShortcut("a", () => {
-  (triggerRef.value?.$el as HTMLElement)?.nextElementSibling?.click();
+  (triggerRef.value?.$el as HTMLElement)?.click();
 });
 </script>
+
+<style scoped>
+/* The class lands on TextInput's component root, which lacks this component's
+   scope id, so a parent-scoped `.search-agents-input :deep(input)` never
+   matches. Deep the whole selector so it applies by class and strips the
+   @tailwindcss/forms white reset that shows through in dark mode. */
+:deep(.search-agents-input input) {
+  @apply bg-transparent px-0;
+}
+
+/* frappe-ui's suffix slot wrapper adds a pe-2; drop it so the shortcut cap
+   sits flush to the row padding, matching the tag picker's search. */
+:deep(.search-agents-input .end-0) {
+  @apply pe-0;
+}
+</style>

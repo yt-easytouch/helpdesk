@@ -1,49 +1,53 @@
 <template>
   <Dialog
-    v-model="show"
-    :options="{ size: '5xl' }"
-    :disableOutsideClickToClose="disableSettingModalOutsideClick"
+    v-model:open="show"
+    size="5xl"
+    bare
+    :dismissible="!disableSettingModalOutsideClick"
   >
-    <template #body>
-      <div class="flex z-50" :style="{ height: 'calc(100vh - 8rem)' }">
+    <template #default>
+      <div
+        class="flex z-50 overflow-hidden"
+        :style="{ height: 'calc(100vh - 8rem)' }"
+      >
         <div
-          class="flex w-52 shrink-0 flex-col bg-gray-50 p-1 overflow-y-auto hide-scrollbar"
+          class="flex-col rounded-l-6 w-56 shrink-0 ps-1 py-1 bg-surface-sidebar overflow-y-auto hide-scrollbar"
         >
           <h1
-            class="h-7.5 px-2 py-[7px] my-[3px] flex cursor-pointer gap-1.5 text-base text-ink-gray-5 transition-all duration-300 ease-in-out truncate"
+            class="h-7.5 px-2 py-[7px] my-[3px] flex cursor-pointer gap-1.5 text-xs-medium text-ink-gray-5 transition-all duration-300 ease-in-out sticky top-0 z-10 bg-surface-sidebar ml-1"
           >
-            {{ __("My Settings") }}
+            {{ __("Account") }}
           </h1>
           <div v-for="tab in tabs" class="last:mb-2">
             <div v-if="!tab.noborder" class="mx-2 my-2.5"></div>
 
             <div
               v-if="!tab.hideLabel"
-              class="h-7.5 px-2 py-[7px] my-[3px] flex cursor-pointer gap-1.5 text-base text-ink-gray-5 transition-all duration-300 ease-in-out"
+              class="h-7.5 px-2 py-[7px] my-[3px] flex cursor-pointer gap-1.5 text-xs-medium text-ink-gray-5 transition-all duration-300 ease-in-out sticky top-0 z-10 bg-surface-sidebar ml-1"
             >
-              <Tooltip :text="__(tab.label)" placement="right">
+              <Tooltip :text="__(tab.label)" side="right">
                 <span class="truncate">{{ __(tab.label) }}</span>
               </Tooltip>
             </div>
 
-            <nav class="space-y-[3px] px-1">
+            <nav class="space-y-[3px] pr-2 pl-1">
               <button
                 v-for="item in tab.items"
                 :key="item.label"
-                class="flex h-7 w-full items-center gap-2 rounded px-2 py-[7px]"
+                class="flex h-7 w-full items-center gap-2 rounded-4 px-2 py-[7px]"
                 :class="[
                   activeTab?.label == item.label
-                    ? 'bg-white shadow-sm'
-                    : 'hover:bg-gray-100',
+                    ? 'bg-surface-elevation-3 shadow-sm'
+                    : 'hover:bg-surface-gray-2',
                 ]"
                 @click="() => onTabChange(item)"
               >
                 <component
                   :is="item.icon"
-                  class="h-4 w-4 text-gray-700 shrink-0"
+                  class="h-4 w-4 text-ink-gray-7 shrink-0"
                 />
-                <Tooltip :text="__(item.label)" placement="right">
-                  <span class="text-p-sm text-gray-800 truncate">
+                <Tooltip :text="__(item.label)" side="right">
+                  <span class="text-p-sm text-ink-gray-8 truncate">
                     {{ __(item.label) }}
                   </span>
                 </Tooltip>
@@ -51,7 +55,9 @@
             </nav>
           </div>
         </div>
-        <div class="flex flex-1 flex-col bg-surface-modal max-w-[816px]">
+        <div
+          class="flex flex-1 flex-col bg-surface-elevation-2 max-w-[816px] overflow-hidden relative"
+        >
           <component
             :is="activeTab.component"
             v-if="activeTab"
@@ -86,7 +92,7 @@
 </template>
 <script setup lang="ts">
 import { Dialog, Tooltip } from "frappe-ui";
-import { ModelRef, ref, watch } from "vue";
+import { ModelRef, ref } from "vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import {
   activeTab,

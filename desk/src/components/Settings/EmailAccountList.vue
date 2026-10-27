@@ -11,19 +11,20 @@
       <Button
         :label="__('New')"
         theme="gray"
+        class="rtl:flex-row-reverse"
         variant="solid"
         @click="emit('update:step', 'email-add')"
-        icon-left="plus"
+        icon-left="lucide-plus"
       />
     </template>
     <template #content>
       <!-- list accounts -->
       <div
-        class="-ml-2 grow"
+        class="-ms-2 grow"
         v-if="!emailAccounts.loading && Boolean(emailAccounts.data?.length)"
       >
-        <div class="flex text-sm text-gray-600">
-          <div class="ml-2">{{ __("Email account name") }}</div>
+        <div class="flex text-sm text-ink-gray-5">
+          <div class="ms-2">{{ __("Email account name") }}</div>
         </div>
         <hr class="mx-2 mt-2" />
         <div
@@ -34,37 +35,34 @@
             :emailAccount="emailAccount"
             @click="emit('update:step', 'email-edit', emailAccount)"
           />
-          <hr class="mx-2" />
+          <hr
+            class="mx-2"
+            v-if="
+              emailAccount !==
+              emailAccounts?.data[emailAccounts?.data?.length - 1]
+            "
+          />
         </div>
       </div>
       <!-- fallback if no email accounts -->
-      <div
-        v-else
-        class="flex flex-col items-center justify-center gap-4 h-full"
-      >
-        <div
-          class="p-4 size-14.5 rounded-full bg-surface-gray-1 flex justify-center items-center"
-        >
-          <EmailIcon class="size-6 text-ink-gray-6" />
-        </div>
-        <div class="flex flex-col items-center gap-1">
-          <div class="text-base font-medium text-ink-gray-6">
-            {{ __("No email account found") }}
-          </div>
-          <div class="text-p-sm text-ink-gray-5 max-w-60 text-center">
-            {{ __("Add one to get started.") }}
-          </div>
-        </div>
-      </div>
+      <EmptyState
+        v-else-if="!emailAccounts.loading"
+        variant="badge"
+        :icon="EmailIcon"
+        :title="__('No email account found')"
+        :description="__('Add one to get started.')"
+      />
     </template>
   </SettingsLayoutBase>
 </template>
 
 <script setup lang="ts">
+import EmptyState from "@/components/EmptyState.vue";
+import SettingsLayoutBase from "@/components/layouts/SettingsLayoutBase.vue";
 import { EmailAccount } from "@/types";
 import { createListResource } from "frappe-ui";
+import { EmailIcon } from "../icons";
 import EmailAccountCard from "./EmailAccountCard.vue";
-import SettingsLayoutBase from "@/components/layouts/SettingsLayoutBase.vue";
 
 const emit = defineEmits(["update:step"]);
 

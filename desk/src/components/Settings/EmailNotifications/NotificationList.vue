@@ -8,48 +8,49 @@
     "
   >
     <template #content>
-      <ul class="isolate -ml-3">
-        <li
-          v-for="notification in notifications"
+      <ul class="isolate -ms-3">
+        <div
+          v-for="(notification, index) in notifications"
           :key="notification.name"
-          class="flex items-center justify-between p-3 rounded relative"
         >
-          <div class="flex flex-col gap-1">
-            <h2
-              class="text-base font-medium text-ink-gray-7 relative z-10 pointer-events-none"
+          <li class="flex items-center justify-between p-3 rounded-4 relative">
+            <div class="flex flex-col gap-1">
+              <h2
+                class="text-base-medium text-ink-gray-7 relative z-10 pointer-events-none"
+              >
+                {{ __(notification.label) }}
+              </h2>
+              <p
+                class="text-sm text-ink-gray-5 truncate relative z-10 pointer-events-none"
+              >
+                {{ __(notification.description) }}
+              </p>
+            </div>
+            <LucideChevronRight
+              class="text-ink-gray-7 size-4 relative z-10 pointer-events-none rtl:rotate-180"
+            />
+            <div
+              class="w-full h-full absolute top-0 start-0 hover:bg-surface-sidebar rounded-[inherit]"
+              @click="
+                () => {
+                  props.onSelect(notification);
+                }
+              "
             >
-              {{ notification.label }}
-            </h2>
-            <p
-              class="text-sm text-ink-gray-5 truncate relative z-10 pointer-events-none"
-            >
-              {{ notification.description }}
-            </p>
-          </div>
-          <FeatherIcon
-            name="chevron-right"
-            class="text-ink-gray-7 size-4 relative z-10 pointer-events-none"
-          />
-          <button
-            type="button"
-            class="w-full h-full absolute top-0 left-0 hover:bg-gray-50 rounded-[inherit]"
-            @click="
-              () => {
-                props.onSelect(notification);
-              }
-            "
-          >
-            <span class="sr-only">{{
-              __("customize {0}", notification.name)
-            }}</span>
-          </button>
-        </li>
+              <span class="sr-only">{{
+                __("customize {0}", notification.name)
+              }}</span>
+            </div>
+          </li>
+          <hr v-if="index < notifications.length - 1" class="mx-2" />
+        </div>
       </ul>
     </template>
   </SettingsLayoutBase>
 </template>
 
 <script setup lang="ts">
+import LucideChevronRight from "~icons/lucide/chevron-right";
 import { __ } from "@/translation";
 import type { AtLeastOneNotifcation, Notification } from "./types";
 import SettingsLayoutBase from "@/components/layouts/SettingsLayoutBase.vue";

@@ -1,5 +1,4 @@
-import { useTelemetry } from "frappe-ui/frappe";
-import "../../../frappe/frappe/public/js/lib/posthog.js";
+import { useTelemetry } from "@framework/ui";
 const APP = "helpdesk";
 
 interface CaptureOptions {

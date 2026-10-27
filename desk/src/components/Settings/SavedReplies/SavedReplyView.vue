@@ -1,24 +1,9 @@
 <template>
-  <SettingsLayoutBase>
-    <template #title>
-      <div class="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          icon-left="chevron-left"
-          :label="savedReplyData.title || __('New Saved Reply')"
-          size="md"
-          @click="goBack()"
-          class="cursor-pointer -ml-4 hover:bg-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:none active:bg-transparent active:outline-none active:ring-0 active:ring-offset-0 active:text-ink-gray-5 font-semibold text-ink-gray-7 text-lg hover:opacity-70 !pr-0"
-        />
-        <Badge
-          variant="subtle"
-          theme="orange"
-          size="sm"
-          :label="__('Unsaved changes')"
-          v-if="isDirty"
-        />
-      </div>
-    </template>
+  <SettingsLayoutBase
+    :back-label="savedReplyData.title || __('New Saved Reply')"
+    :on-back="goBack"
+    :dirty="isDirty"
+  >
     <template #header-actions>
       <div class="flex items-center gap-2">
         <Button
@@ -26,10 +11,10 @@
           :label="__('Preview')"
           size="sm"
           @click="onShowPreview()"
-          icon-left="eye"
+          icon-left="lucide-eye"
           :disabled="
             Boolean(
-              !content?.editor?.state?.doc?.textContent?.trim()?.length
+              !savedReplyData.message?.replace(/<[^>]*>/g, '')?.trim()?.length
             ) || isDirty
           "
         />
@@ -51,7 +36,7 @@
     <template #content>
       <div
         v-if="getSavedReplyData.loading"
-        class="flex items-center justify-center mt-12"
+        class="flex items-center justify-center absolute inset-x-0 top-5.5 bottom-0"
       >
         <LoadingIndicator class="w-4" />
       </div>
@@ -69,25 +54,15 @@
             <ErrorMessage class="text-p-sm" :message="errors.title" />
           </div>
           <div class="space-y-1.5">
-            <FormLabel :label="__('Scope')" />
             <Select
+              :label="__('Visibility')"
               v-model="savedReplyData.scope"
               :options="scopeDropdownOptions"
               required
+              class="w-full"
             >
-              <template #prefix>
-                <component
-                  :is="getScopeIcon(savedReplyData.scope)"
-                  class="size-4 text-ink-gray-9"
-                />
-              </template>
-              <template #option="{ option }">
-                <div class="flex gap-2 items-center cursor-pointer">
-                  <component :is="option.icon" class="size-4 text-ink-gray-9" />
-                  <span>
-                    {{ option.label }}
-                  </span>
-                </div>
+              <template #item-prefix="{ item }">
+                <component :is="item.icon" class="size-4 text-ink-gray-9" />
               </template>
             </Select>
             <FormLabel
@@ -102,6 +77,7 @@
             v-model="savedReplyData.teams"
             :placeholder="__('Select teams')"
             @update:modelValue="validateData('teams')"
+            class="w-full"
           />
           <div class="text-xs text-ink-gray-5 cursor-default">
             {{ __("Restrict visibility to these teams") }}
@@ -116,27 +92,33 @@
             />
           </div>
           <PreviewDialog v-model="previewDialog" />
-          <TextEditor
-            editor-class="!prose-sm max-w-full overflow-auto min-h-[180px] max-h-80 py-1.5 px-2 rounded-b border border-[--surface-gray-2] bg-surface-gray-2 placeholder-ink-gray-4 hover:border-outline-gray-modals hover:shadow-sm focus:bg-surface-white focus:border-outline-gray-4 focus:shadow-sm focus:ring-0 focus-visible:ring-2 focus-visible:ring-outline-gray-3 text-ink-gray-8 transition-colors -mt-0.5"
+          <CompactEditor
             ref="content"
-            :bubble-menu="false"
-            :content="savedReplyData.message"
-            @change="
-              (val) => {
-                savedReplyData.message = val;
-                validateData('message');
-              }
+            v-model="savedReplyData.message"
+            :upload-fn="
+              (file: any, options: any) =>
+                uploadFunction(
+                  file,
+                  'HD Saved Reply',
+                  savedReplyData.name,
+                  false,
+                  options
+                )
             "
-            :fixed-menu="menuButtons"
             :extensions="[FieldAutocomplete]"
             :placeholder="
               __(
                 'Hello {{ contact }}, \n\nWe are sorry for the inconvenience, we will get back to you soon. \n\nRegards, \n{{ full_name }}'
               )
             "
+            @update:modelValue="validateData('message')"
           />
           <ErrorMessage class="text-p-sm" :message="errors.message" />
         </div>
+        <ActionsEditor
+          v-model="savedReplyData.actions"
+          :error="errors.actions"
+        />
       </div>
     </template>
   </SettingsLayoutBase>
@@ -150,8 +132,15 @@
 </template>
 
 <script setup lang="ts">
+import CompactEditor from "@/components/CompactEditor.vue";
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import DocumentationButton from "@/components/DocumentationButton.vue";
+import { useAuthStore } from "@/stores/auth";
+import { useConfigStore } from "@/stores/config";
+import { __ } from "@/translation";
+import { uploadFunction } from "@/utils";
+import { createFieldAutocomplete } from "@helpdesk/shared/tiptap";
 import {
-  Badge,
   Button,
   createListResource,
   createResource,
@@ -161,25 +150,22 @@ import {
   LoadingIndicator,
   MultiSelect,
   Select,
-  TextEditor,
   toast,
 } from "frappe-ui";
-import { computed, inject, onUnmounted, ref, watch } from "vue";
-import { disableSettingModalOutsideClick } from "../settingsModal";
-import { __ } from "@/translation";
-import PreviewDialog from "./components/PreviewDialog.vue";
-import { menuButtons } from "./savedReplies";
-import ConfirmDialog from "@/components/ConfirmDialog.vue";
-import DocumentationButton from "@/components/DocumentationButton.vue";
 import { storeToRefs } from "pinia";
-import { useConfigStore } from "@/stores/config";
-import { useAuthStore } from "@/stores/auth";
-import { FieldAutocomplete } from "../../../tiptap-extensions";
-import SettingsLayoutBase from "../../layouts/SettingsLayoutBase.vue";
+import { computed, inject, onUnmounted, ref, watch } from "vue";
+import GlobeIcon from "~icons/lucide/globe";
 import UserIcon from "~icons/lucide/user";
 import UsersIcon from "~icons/lucide/users";
-import GlobeIcon from "~icons/lucide/globe";
 import { SavedReply, SavedReplyListResourceSymbol, Team } from "../../../types";
+import SettingsLayoutBase from "../../layouts/SettingsLayoutBase.vue";
+import { disableSettingModalOutsideClick } from "../settingsModal";
+import ActionsEditor from "./components/ActionsEditor.vue";
+import { actionNeedsValue, isActionValueEmpty } from "./components/actionTypes";
+import PreviewDialog from "./components/PreviewDialog.vue";
+import { getTemplateFields } from "./savedReplies";
+
+const FieldAutocomplete = createFieldAutocomplete(getTemplateFields);
 
 const showConfirmDialog = ref({
   show: false,
@@ -209,12 +195,14 @@ const savedReplyData = ref({
   scope: savedRepliesActiveScreen.value.data?.scope || "Personal",
   message: "",
   teams: [],
+  actions: [],
 });
 const initialData = ref("");
 const errors = ref({
   title: "",
   message: "",
   teams: "",
+  actions: "",
 });
 
 const scopeDropdownOptions = computed(() => {
@@ -259,6 +247,7 @@ const getSavedReplyData = createResource({
       scope: data.scope,
       message: data.message,
       teams: data.teams?.map((team) => team.team) || [],
+      actions: JSON.parse(data.actions || "[]"),
     };
     initialData.value = JSON.stringify(savedReplyData.value);
   },
@@ -268,6 +257,9 @@ const getTeamsListResource = createListResource({
   doctype: "HD Team",
   auto: true,
   fields: ["name"],
+  filters: {
+    disabled: 0,
+  },
   start: 0,
   pageLength: 999,
   transform: (data: Array<Team>) => {
@@ -329,10 +321,8 @@ const goBack = () => {
 const onSave = () => {
   validateData();
 
-  if (Object.values(errors.value).some((e) => e)) {
-    toast.error(__("Please fill all the required fields"));
-    return;
-  }
+  // Each field shows its own inline error; no toast needed
+  if (Object.values(errors.value).some((e) => e)) return;
 
   if (savedRepliesActiveScreen.value.data?.name) {
     updateSavedReply();
@@ -350,6 +340,7 @@ const createSavedReply = () => {
       teams: savedReplyData.value.teams.map((team) => ({
         team: team,
       })),
+      actions: savedReplyData.value.actions,
     },
     {
       onSuccess: (data) => {
@@ -389,6 +380,7 @@ const updateSavedReply = async () => {
     teams: savedReplyData.value.teams.map((team) => ({
       team: team,
     })),
+    actions: savedReplyData.value.actions,
   });
 
   if (savedReplyData.value.name !== savedReplyData.value.title) {
@@ -419,10 +411,6 @@ const updateSavedReply = async () => {
   toast.success(__("Saved reply updated successfully."));
 };
 
-const getScopeIcon = (scope: string) => {
-  return scopeDropdownOptions.value.find((x) => x.value === scope)?.icon;
-};
-
 const validateData = (key?: string) => {
   const validateField = (key: string) => {
     switch (key) {
@@ -435,7 +423,9 @@ const validateData = (key?: string) => {
         break;
 
       case "message":
-        if (!content.value?.editor?.state?.doc?.textContent?.trim()?.length) {
+        if (
+          !savedReplyData.value.message?.replace(/<[^>]*>/g, "")?.trim()?.length
+        ) {
           errors.value.message = __("Response is required");
         } else {
           errors.value.message = "";
@@ -453,6 +443,16 @@ const validateData = (key?: string) => {
         }
         break;
 
+      case "actions": {
+        const hasEmpty = savedReplyData.value.actions.some(
+          (action) =>
+            actionNeedsValue(action.action_type) &&
+            isActionValueEmpty(action.action_type, action.value)
+        );
+        errors.value.actions = hasEmpty ? __("Values can't be empty") : "";
+        break;
+      }
+
       default:
         break;
     }
@@ -469,6 +469,7 @@ const validateData = (key?: string) => {
 watch(
   savedReplyData,
   (newVal) => {
+    if (errors.value.actions) validateData("actions");
     if (!initialData.value) return;
     isDirty.value = JSON.stringify(newVal) != initialData.value;
     if (isDirty.value) {

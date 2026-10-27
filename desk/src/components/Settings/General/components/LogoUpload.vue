@@ -4,24 +4,27 @@
   >
     <div class="flex flex-col sm:flex-row items-center gap-3.5">
       <div
-        class="flex items-center justify-center min-w-16 min-h-16 rounded-lg overflow-hidden border border-gray-100"
+        class="flex items-center justify-center min-w-16 min-h-16 rounded-6 overflow-hidden border border-outline-gray-1"
       >
         <Avatar
           v-if="props.image"
-          size="3xl"
+          shape="square"
+          class="size-16"
           :image="props.image"
           :label="props.title"
         />
-        <FeatherIcon v-else name="image" class="size-6 text-ink-gray-4" />
+        <LucideImage v-else class="size-6 text-ink-gray-4" />
       </div>
       <div class="flex flex-col gap-1 max-w-sm items-start">
-        <span class="text-base font-medium text-ink-gray-8">{{ title }}</span>
+        <span class="text-base-medium text-ink-gray-8">{{ title }}</span>
         <span class="text-p-sm text-ink-gray-6">{{ description }}</span>
       </div>
     </div>
     <div>
+      <!-- Public: signed-out portal visitors load these. -->
       <FileUploader
         :fileTypes="['image/*']"
+        :private="false"
         @success="
           (file) => {
             emit('onUpload', file.file_url);
@@ -29,7 +32,7 @@
         "
       >
         <template v-slot="{ progress, uploading, openFileSelector }">
-          <div class="flex items-end space-x-2">
+          <div class="flex items-end gap-x-2">
             <Button
               @click="openFileSelector"
               :iconLeft="ImageUpIcon"
@@ -44,7 +47,7 @@
             />
             <Button
               v-if="props.image"
-              iconLeft="trash-2"
+              iconLeft="lucide-trash-2"
               :label="__('Remove')"
               @click="emit('onRemove')"
               :loading="isLoading"
@@ -57,7 +60,8 @@
 </template>
 
 <script setup lang="ts">
-import { Avatar, Button, FeatherIcon, FileUploader } from "frappe-ui";
+import LucideImage from "~icons/lucide/image";
+import { Avatar, Button, FileUploader } from "frappe-ui";
 import ImageUpIcon from "~icons/lucide/image-up";
 
 const emit = defineEmits(["onUpload", "onRemove"]);

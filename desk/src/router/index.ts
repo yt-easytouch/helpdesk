@@ -1,7 +1,9 @@
 import { useScreenSize } from "@/composables/screen";
+import { canViewPersona, personaInterrupt } from "@/persona";
 import { useAuthStore } from "@/stores/auth";
 import { useUserStore } from "@/stores/user";
-import { isCustomerPortal } from "@/utils";
+import { CUSTOMER_PORTAL_ROOT } from "@/utils";
+import { ROUTES } from "@helpdesk/shared/portalRoutes";
 import { createRouter, createWebHistory } from "vue-router";
 const { isMobileView } = useScreenSize();
 
@@ -19,10 +21,11 @@ declare module "vue-router" {
   }
 }
 
-const routes = [
+// Pages that render inside the desk chrome.
+const portalRoutes = [
   // Agent Portal Routes
   {
-    path: "/",
+    path: "",
     redirect: "/home",
   },
   {
@@ -84,12 +87,24 @@ const routes = [
   {
     path: "/customers",
     name: "CustomerList",
-    component: () => import("@/pages/desk/customer/Customers.vue"),
+    component: () => import("@/pages/customer/Customers.vue"),
+  },
+  {
+    path: "/customers/:id",
+    name: "Customer",
+    component: () => import("@/pages/customer/Customer.vue"),
+    props: true,
   },
   {
     path: "/contacts",
     name: "ContactList",
-    component: () => import("@/pages/desk/contact/Contacts.vue"),
+    component: () => import("@/pages/contact/Contacts.vue"),
+  },
+  {
+    path: "/contacts/:id",
+    name: "Contact",
+    component: () => import("@/pages/contact/Contact.vue"),
+    props: true,
   },
   {
     path: "/agents",
@@ -117,68 +132,6 @@ const routes = [
     component: () => import("@/pages/call-logs/CallLogs.vue"),
   },
 
-  // Customer Portal Routes
-  {
-    path: "/my-tickets",
-    name: "TicketsCustomer",
-    component: () => import("@/pages/ticket/Tickets.vue"),
-    meta: {
-      public: true,
-      auth: true,
-    },
-  },
-  {
-    path: "/my-tickets/:ticketId",
-    name: "TicketCustomer",
-    component: () => import("@/pages/ticket/TicketCustomer.vue"),
-    meta: {
-      public: true,
-      auth: true,
-    },
-    props: true,
-  },
-  {
-    path: "/my-tickets/new",
-    name: "TicketNew",
-    component: () => import("@/pages/ticket/TicketNew.vue"),
-    props: true,
-    meta: {
-      onSuccessRoute: "TicketCustomer",
-      parent: "TicketsCustomer",
-      public: true,
-      auth: true,
-    },
-  },
-  {
-    path: "/kb-public",
-    name: "CustomerKnowledgeBase",
-    component: () => import("@/pages/knowledge-base/KnowledgeBaseCustomer.vue"),
-    meta: {
-      public: true,
-      auth: true,
-    },
-  },
-  {
-    path: "/kb-public/:categoryId",
-    name: "Articles",
-    component: () => import("@/pages/knowledge-base/Articles.vue"),
-    props: true,
-    meta: {
-      public: true,
-      auth: true,
-    },
-  },
-  {
-    path: "/kb-public/articles/:articleId",
-    name: "ArticlePublic",
-    component: () => import("@/pages/knowledge-base/Article.vue"),
-    props: true,
-    meta: {
-      public: true,
-      auth: true,
-    },
-  },
-
   // Additonal routes
   {
     path: "/:pathMatch(.*)*",
@@ -187,7 +140,22 @@ const routes = [
   },
 ];
 
-const handleMobileView = (componentName) => {
+const routes = [
+  // Renders bare — no portal chrome.
+  {
+    path: "/onboarding",
+    name: "Persona",
+    component: () => import("@/pages/PersonaForm.vue"),
+    beforeEnter: () => canViewPersona(useAuthStore()) || { name: "Home" },
+  },
+  {
+    path: "/",
+    component: () => import("@/roots/AgentRoot.vue"),
+    children: portalRoutes,
+  },
+];
+
+const handleMobileView = (componentName: string) => {
   return isMobileView.value ? `Mobile${componentName}` : componentName;
 };
 
@@ -198,10 +166,12 @@ export const router = createRouter({
 
 router.beforeEach(async (to, _, next) => {
   const authStore = useAuthStore();
-  isCustomerPortal.value = to.meta.public || false;
   if (authStore.isLoggedIn) {
     await authStore.init();
   }
+
+  const interrupt = personaInterrupt(to, authStore);
+  if (interrupt) return next(interrupt);
 
   if (!authStore.isLoggedIn) {
     const redirectURL = to.fullPath !== "/" ? to.fullPath : "";
@@ -209,21 +179,18 @@ router.beforeEach(async (to, _, next) => {
     window.location.href =
       LOGIN_PAGE +
       (redirectURL ? `?redirect-to=/helpdesk${redirectURL}` : "/helpdesk");
-  } else if (!to.meta.public && !authStore.hasDeskAccess) {
-    next({ name: "TicketsCustomer" });
   } else if (to.name === "TicketAgent" && !authStore.isAgent) {
-    const ticketId = to.params.ticketId;
-    next({
-      name: "TicketCustomer",
-      params: { ticketId },
-    });
+    window.location.replace(
+      CUSTOMER_PORTAL_ROOT + ROUTES.ticket(to.params.ticketId as string)
+    );
+  } else if (!authStore.hasDeskAccess) {
+    window.location.replace(window.customer_home_page);
   } else {
     next();
   }
 });
 
 router.afterEach(async (to) => {
-  if (to.meta.public) return;
   const { users } = useUserStore();
   if (!users?.fetched) {
     await users.fetch();

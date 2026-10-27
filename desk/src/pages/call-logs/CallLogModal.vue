@@ -1,20 +1,20 @@
 <template>
-  <Dialog v-model="show" :options="dialogOptions" @after-leave="resetCallLog">
-    <template #body>
-      <div class="px-4 pt-5 bg-surface-modal sm:px-6">
+  <Dialog v-model:open="show" bare @after-leave="resetCallLog">
+    <template #default>
+      <div class="px-4 pt-5 bg-surface-elevation-2 sm:px-6">
         <div class="flex items-center justify-between mb-5">
           <div class="flex items-center gap-2">
-            <h3 class="text-2xl font-semibold leading-6 text-ink-gray-9">
+            <h3 class="text-2xl-semibold leading-6 text-ink-gray-9">
               {{ __(dialogOptions.title) || __("Untitled") }}
             </h3>
-            <Badge v-if="isDirty" :label="__('Not Saved')" theme="orange" />
+            <Badge v-if="isDirty" :label="__('Not Saved')" theme="amber" />
           </div>
           <div class="flex items-center gap-1">
             <Button
               variant="ghost"
               class="w-7"
               @click="show = false"
-              icon="x"
+              icon="lucide-x"
             />
           </div>
         </div>
@@ -134,7 +134,8 @@ import {
   FormLabel,
   Select,
   toast,
-  type DialogProps,
+  type DialogAction,
+  type DialogSize,
 } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 import { __ } from "@/translation";
@@ -217,7 +218,11 @@ const callLogStatusOptions = [
   { label: __("In Progress"), value: "In Progress" },
 ];
 
-const dialogOptions = computed<DialogProps["options"]>(() => ({
+const dialogOptions = computed<{
+  title: string;
+  size: DialogSize;
+  actions: DialogAction[];
+}>(() => ({
   title: !editMode.value ? __("New Call Log") : __("Edit Call Log"),
   size: "xl",
   actions: [
